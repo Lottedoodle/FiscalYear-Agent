@@ -1,7 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 
 // // Example

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ChatOpenAI } from "@langchain/openai"
 import { ChatPromptTemplate } from "@langchain/core/prompts"
 import { toUIMessageStream } from "@ai-sdk/langchain"
-import { createUIMessageStreamResponse, UIMessage, convertToModelMessages } from "ai"
+import { createUIMessageStreamResponse, UIMessage } from "ai"
 
 // กำหนดให้ API นี้ทำงานแบบ Edge Runtime เพื่อประสิทธิภาพที่ดีกว่า
 export const runtime = "edge"

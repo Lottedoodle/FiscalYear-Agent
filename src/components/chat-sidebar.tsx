@@ -332,7 +332,7 @@ export function ChatSidebar({ display_name, email }: ChatSidebarProps) {
             <span className="text-white font-bold text-sm">AI</span>
           </div>
           <div className="text-md font-bold text-slate-900 dark:text-white tracking-tight group-data-[collapsible=icon]:hidden">
-            Genius AI
+            TAE's AI
           </div>
         </div>
         <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">

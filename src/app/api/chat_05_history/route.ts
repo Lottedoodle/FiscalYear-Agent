@@ -78,16 +78,10 @@ const pool = new Pool({
   user: process.env.PG_USER, // username สำหรับเข้าถึง database
   password: process.env.PG_PASSWORD, // password สำหรับเข้าถึง database
   database: process.env.PG_DATABASE, // ชื่อ database ที่ต้องการเชื่อมต่อ
-  
-  // Connection pool settings สำหรับ Supabase Transaction Pooler
-  max: 20, // จำนวน connection สูงสุดใน pool
-  idleTimeoutMillis: 30000, // ปิด idle connection หลัง 30 วินาที
-  connectionTimeoutMillis: 10000, // timeout เมื่อรอ connection นานเกิน 10 วินาที
-  
-  // SSL configuration
-  ssl: {
-    rejectUnauthorized: false // อนุญาต self-signed certificates
-  },
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false, // SSL config สำหรับ production
 });
 
 // ===============================================
@@ -470,62 +464,21 @@ export async function GET(req: NextRequest) {
      * เชื่อมต่อกับ PostgreSQL database
      * ใช้ connection pool เพื่อจัดการ connection อย่างมีประสิทธิภาพ
      */
-    console.log('🔌 Attempting to connect to database...');
-    console.log('Database config:', {
-      host: process.env.PG_HOST,
-      port: process.env.PG_PORT,
-      user: process.env.PG_USER,
-      database: process.env.PG_DATABASE,
-    });
-    
     const client = await pool.connect(); // เชื่อมต่อ database
-    console.log('✅ Database connected successfully');
 
     try {
       // ===============================================
-      // Step 3: Validate Session Existence - ตรวจสอบว่า session มีอยู่จริง
+      // Step 3: Query Messages - ดึงข้อความจากฐานข้อมูล
       // ===============================================
-      
+
       /**
-       * ตรวจสอบว่า session_id มีอยู่ใน database หรือไม่
-       * ป้องกัน error เมื่อ session ไม่มีอยู่
+       * ดึงข้อความทั้งหมดของ session นี้จากตาราง chat_messages
+       *
+       * Query Details:
+       * - ดึงฟิลด์ message (JSON), message type, และ created_at
+       * - กรองด้วย session_id
+       * - เรียงลำดับตาม created_at (เก่าไปใหม่)
        */
-      console.log('🔍 Checking if session exists:', sessionId);
-      
-      const sessionCheck = await client.query(
-        `SELECT id FROM chat_sessions WHERE id = $1`,
-        [sessionId]
-      );
-      
-      console.log('Session check result:', sessionCheck.rows.length, 'rows found');
-      
-      // ถ้าไม่พบ session ให้ return empty messages แทนที่จะ error
-      if (sessionCheck.rows.length === 0) {
-        console.log('⚠️ Session not found, returning empty messages');
-        client.release(); // ปิด connection ก่อน return
-        return new Response(
-          JSON.stringify({ messages: [] }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // ===============================================
-      // Step 4: Query Messages - ดึงข้อความจากฐานข้อมูล
-      // ===============================================
-
-       /**
-        * ดึงข้อความทั้งหมดของ session นี้จากตาราง chat_messages
-        *
-        * Query Details:
-        * - ดึงฟิลด์ message (JSON), message type, และ created_at
-        * - กรองด้วย session_id
-        * - เรียงลำดับตาม created_at (เก่าไปใหม่)
-        */
-      console.log('🔍 Querying chat messages for sessionId:', sessionId);
-      
       const result = await client.query(
         `
         SELECT message, message->>'type' as message_type, created_at
@@ -535,11 +488,9 @@ export async function GET(req: NextRequest) {
       `,
         [sessionId],
       );
-      
-      console.log('✅ Query result:', result.rows.length, 'messages found');
 
       // ===============================================
-      // Step 5: Transform Data - แปลงข้อมูลให้เหมาะกับ Frontend
+      // Step 4: Transform Data - แปลงข้อมูลให้เหมาะกับ Frontend
       // ===============================================
 
       /**
@@ -589,7 +540,7 @@ export async function GET(req: NextRequest) {
       });
 
       // ===============================================
-      // Step 6: Return Success Response - ส่งผลลัพธ์กลับ
+      // Step 5: Return Success Response - ส่งผลลัพธ์กลับ
       // ===============================================
 
       /**
@@ -609,7 +560,7 @@ export async function GET(req: NextRequest) {
       );
     } finally {
       // ===============================================
-      // Step 7: Cleanup - ปิดการเชื่อมต่อฐานข้อมูล
+      // Step 6: Cleanup - ปิดการเชื่อมต่อฐานข้อมูล
       // ===============================================
 
       /**
@@ -631,14 +582,7 @@ export async function GET(req: NextRequest) {
      * 1. แสดง error ใน console
      * 2. ส่ง error response กลับไปยัง client
      */
-    console.error("❌ Error fetching messages:", error); // แสดง error ใน console
-    
-    // แสดง error details เพิ่มเติม
-    if (error instanceof Error) {
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    console.error("Error fetching messages:", error); // แสดง error ใน console
 
     return new Response(
       JSON.stringify({

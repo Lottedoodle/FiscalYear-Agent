@@ -26,11 +26,10 @@ import { trimMessages } from '@langchain/core/messages'
 import { StringOutputParser } from '@langchain/core/output_parsers'
 import { encodingForModel } from '@langchain/core/utils/tiktoken'
 
-// ✨ NEW: Imports for Agent and Tools
+// ✨ NEW: Imports for Tools
 import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
-import { DynamicStructuredTool } from '@langchain/core/tools'
-import { AgentExecutor, createOpenAIToolsAgent } from 'langchain/agents'
+import { tool } from '@langchain/core/tools'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -51,14 +50,9 @@ const supabase = createClient(
 // ===============================================
 
 // สร้าง Tool สำหรับค้นหาข้อมูลสินค้า
-const getProductInfoTool = new DynamicStructuredTool({
-    name: "get_product_info",
-    description: "ค้นหาข้อมูลสินค้าจากฐานข้อมูล รวมถึงราคาและจำนวนคงคลัง (stock) โดยรับชื่อสินค้าเป็น input",
-    schema: z.object({
-      productName: z.string().describe("ชื่อของสินค้าที่ต้องการค้นหา เช่น 'Running Shoes', 'Earbuds', 'Keyboard' เป็นต้น"),
-    }),
-    func: async ({ productName }) => {
-      console.log(`🔧 TOOL CALLED: get_product_info with productName="${productName}"`);
+const getProductInfoTool = tool(
+  async ({ productName }: { productName: string }) => {
+    console.log(`🔧 TOOL CALLED: get_product_info with productName="${productName}"`);
       try {
         // ตรวจสอบการเชื่อมต่อฐานข้อมูล
         const { data, error } = await supabase

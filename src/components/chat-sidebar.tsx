@@ -2,9 +2,9 @@
  * ===============================================
  * Chat Sidebar Component - แถบด้านข้างสำหรับการนำทาง
  * ===============================================
- *
+ * 
  * Purpose: แถบด้านข้างสำหรับนำทางและจัดการประวัติการสนทนา
- *
+ * 
  * Features:
  * - แสดงรายการประวัติการสนทนาจัดกลุ่มตามวันที่
  * - สร้างการสนทนาใหม่
@@ -14,15 +14,15 @@
  * - User profile และ logout
  * - Theme toggle (สลับธีม)
  * - Responsive design สำหรับ mobile/desktop
- *
+ * 
  * Components:
  * - SettingsDialog: dialog สำหรับการตั้งค่าต่างๆ
  * - ChatSidebar: sidebar หลัก
- *
+ * 
  * Data Management:
  * - useChatSessions hook สำหรับจัดการข้อมูล sessions
  * - useChatContext สำหรับ state management
- *
+ * 
  * Authentication: ต้องมี userId เพื่อเข้าถึงข้อมูล
  * Navigation: ใช้ Next.js router สำหรับการนำทาง
  */
@@ -59,12 +59,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"                                        // Alert dialog สำหรับยืนยันการลบ
-import {
-  PlusIcon,
-  Search,
-  Settings,
-  User,
-  X,
+import { 
+  PlusIcon, 
+  Search, 
+  Settings, 
+  User, 
+  X, 
   Bell,
   Palette,
   Plug,
@@ -100,7 +100,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"                   // 
 
 /**
  * Interface สำหรับ Props ของ ChatSidebar component
- *
+ * 
  * Structure:
  * - display_name: string - ชื่อแสดงผลของผู้ใช้
  * - email: string - อีเมลของผู้ใช้
@@ -118,19 +118,19 @@ interface ChatSidebarProps {
 
 /**
  * SettingsDialog Component: Dialog สำหรับการตั้งค่าแอปพลิเคชัน
- *
+ * 
  * Purpose:
  * - แสดง settings ในรูปแบบ modal dialog
  * - รองรับ multiple tabs สำหรับหมวดหมู่ต่างๆ
  * - Responsive design สำหรับ mobile/desktop
  * - Portal rendering เพื่อแสดงนอก DOM tree
- *
+ * 
  * Features:
  * - Tab navigation สำหรับหมวดหมู่ settings
  * - Horizontal scroll สำหรับ mobile tabs
  * - Backdrop click เพื่อปิด dialog
  * - Keyboard navigation support
- *
+ * 
  * @param isOpen - สถานะการเปิด/ปิด dialog
  * @param onClose - callback เมื่อปิด dialog
  * @returns JSX Element หรือ null
@@ -139,10 +139,10 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   // ============================================================================
   // STEP 1: STATE DECLARATIONS - การประกาศตัวแปร State
   // ============================================================================
-
+  
   /**
    * สถานะของ Settings Dialog
-   *
+   * 
    * Variables:
    * - activeTab: tab ที่เลือกในปัจจุบัน
    * - mounted: สถานะการ mount ของ component
@@ -158,7 +158,7 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * Effect สำหรับตั้งค่า mounted state
-   *
+   * 
    * Purpose:
    * - ป้องกัน hydration mismatch ใน SSR
    * - ให้แน่ใจว่า component mount เสร็จแล้วก่อนแสดงผล
@@ -169,12 +169,12 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * Effect สำหรับจัดการ horizontal scroll ใน mobile tabs
-   *
+   * 
    * Purpose:
    * - รองรับการ scroll ด้วย mouse wheel ใน tabs container
    * - ปรับปรุง UX สำหรับ mobile devices
    * - ใช้ native event listener สำหรับควบคุมที่ดีกว่า
-   *
+   * 
    * Dependencies: [mounted]
    */
   useEffect(() => {
@@ -183,11 +183,11 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
     /**
      * Handler สำหรับ wheel event
-     *
+     * 
      * Purpose:
      * - แปลง vertical scroll เป็น horizontal scroll
      * - ป้องกัน default behavior ของ wheel event
-     *
+     * 
      * @param e - WheelEvent object
      */
     const handleWheel = (e: WheelEvent) => {
@@ -215,22 +215,22 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * ฟังก์ชันสำหรับจัดการการเลือก tab และ scrolling
-   *
+   * 
    * Purpose:
    * - เปลี่ยน active tab
    * - scroll ให้ tab ที่เลือกอยู่ในมุมมองที่เห็นได้
    * - ปรับปรุง UX สำหรับ mobile navigation
-   *
+   * 
    * Process:
    * 1. ตั้งค่า active tab
    * 2. รอให้ DOM update
    * 3. scroll ไปยัง tab ที่เลือก
-   *
+   * 
    * @param tabId - ID ของ tab ที่ต้องการเลือก
    */
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId)                                                      // ตั้งค่า active tab
-
+    
     // ให้แน่ใจว่า tab ที่คลิกจะอยู่ในมุมมองที่เห็นได้
     setTimeout(() => {
       if (tabsContainerRef.current) {
@@ -238,10 +238,10 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         const activeButton = tabsContainerRef.current.querySelector(`[data-tab-id="${tabId}"]`) as HTMLElement
         if (activeButton) {
           // scroll ไปยัง tab ที่เลือกด้วย smooth animation
-          activeButton.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest',
-            inline: 'center'
+          activeButton.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest', 
+            inline: 'center' 
           })
         }
       }
@@ -254,7 +254,7 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * ตรวจสอบสถานะก่อนแสดงผล dialog
-   *
+   * 
    * Conditions:
    * - ไม่แสดงถ้า isOpen = false
    * - ไม่แสดงถ้า component ยังไม่ mount (ป้องกัน SSR issues)
@@ -267,7 +267,7 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * การกำหนดค่า tabs สำหรับ Settings Dialog
-   *
+   * 
    * Structure:
    * - id: unique identifier สำหรับ tab
    * - label: ข้อความแสดงผล
@@ -290,11 +290,11 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * ฟังก์ชันสำหรับแสดงเนื้อหาของ tab ที่เลือก
-   *
+   * 
    * Purpose:
    * - แสดง component ที่เหมาะสมตาม active tab
    * - จัดการ routing ภายใน settings dialog
-   *
+   * 
    * @returns JSX Element ของ tab content
    */
   const renderTabContent = () => {
@@ -326,13 +326,13 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * โครงสร้างเนื้อหาของ Settings Dialog
-   *
+   * 
    * Structure:
    * 1. Backdrop - พื้นหลังสำหรับปิด dialog
    * 2. Dialog Container - container หลักของ dialog
    * 3. Mobile/Desktop Tab Navigation
    * 4. Main Content Area
-   *
+   * 
    * Features:
    * - Responsive layout (mobile/desktop)
    * - Portal rendering
@@ -344,28 +344,28 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       {/* ============================================================================ */}
       {/* BACKDROP - พื้นหลังสำหรับปิด Dialog */}
       {/* ============================================================================ */}
-
+      
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-50"
+      <div 
+        className="fixed inset-0 bg-black/50 z-50"                          
         onClick={onClose}                                                    // คลิก backdrop เพื่อปิด dialog
       />
-
+      
       {/* ============================================================================ */}
       {/* DIALOG CONTAINER - Container หลักของ Dialog */}
       {/* ============================================================================ */}
-
+      
       {/* Dialog */}
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
         <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-4xl h-[80vh] sm:h-[80vh] overflow-hidden border border-gray-200 dark:border-gray-700 pointer-events-auto">
           <div className="flex h-full min-h-0 flex-col sm:flex-row mobile-dialog-layout">
-
+            
             {/* ============================================================================ */}
             {/* MOBILE TAB NAVIGATION - แถบ Tab สำหรับ Mobile */}
             {/* ============================================================================ */}
-
+            
             {/* Mobile Tab Navigation */}
-            <div
+            <div 
               ref={tabsContainerRef}                                         // ref สำหรับ scroll handling
               className="flex sm:hidden mobile-tabs-scroll bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 py-2"
             >
@@ -392,11 +392,11 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 })}
               </div>
             </div>
-
+            
             {/* ============================================================================ */}
             {/* DESKTOP SIDEBAR - แถบด้านข้างสำหรับ Desktop */}
             {/* ============================================================================ */}
-
+            
             {/* Desktop Sidebar */}
             <div className="hidden sm:block w-64 bg-gray-50 dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700">
               <div className="space-y-1">
@@ -419,38 +419,38 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 })}
               </div>
             </div>
-
+            
             {/* ============================================================================ */}
             {/* MAIN CONTENT AREA - พื้นที่เนื้อหาหลัก */}
             {/* ============================================================================ */}
-
+            
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden sm:overflow-visible">
-
+              
               {/* ============================================================================ */}
               {/* HEADER - ส่วนหัวของ Content Area */}
               {/* ============================================================================ */}
-
+              
               {/* Header */}
               <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                 {/* Title - แสดงชื่อ tab ปัจจุบัน */}
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white capitalize">
                   {tabs.find(tab => tab.id === activeTab)?.label || "General"}  {/* หาชื่อ tab จาก ID */}
                 </h2>
-
+                
                 {/* Close Button - ปุ่มปิด dialog */}
-                <button
+                <button 
                   onClick={onClose}                                          // ปิด dialog
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
-
+              
               {/* ============================================================================ */}
               {/* SETTINGS CONTENT - เนื้อหา Settings */}
               {/* ============================================================================ */}
-
+              
               {/* Settings Content */}
               <div className="flex-1 mobile-content-area sm:dialog-content-scroll sm:overflow-y-auto">
                 <div className="p-4 sm:p-6">
@@ -470,12 +470,12 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   /**
    * แสดงผล dialog ผ่าน createPortal
-   *
+   * 
    * Purpose:
    * - แสดง dialog นอก DOM tree ของ component
    * - ป้องกัน z-index และ overflow issues
    * - รองรับ SSR โดยตรวจสอบ mounted state
-   *
+   * 
    * Conditions:
    * - แสดงเฉพาะเมื่อ mounted = true
    * - ใช้ document.body เป็น target
@@ -489,14 +489,14 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
 /**
  * ChatSidebar Component: แถบด้านข้างสำหรับการนำทางและจัดการประวัติการสนทนา
- *
+ * 
  * Purpose:
  * - แสดงรายการประวัติการสนทนาจัดกลุ่มตามวันที่
  * - สร้างการสนทนาใหม่
  * - ลบประวัติการสนทนา
  * - จัดการ user profile และ settings
  * - รองรับ responsive design
- *
+ * 
  * Features:
  * - Collapsible sidebar
  * - Chat sessions grouped by date
@@ -504,21 +504,21 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
  * - Settings dialog
  * - User profile popover
  * - Theme toggle
- *
+ * 
  * @param display_name - ชื่อแสดงผลของผู้ใช้
  * @param email - อีเมลของผู้ใช้
  * @param userId - ID ของผู้ใช้สำหรับ authentication
  * @returns JSX Element
  */
 export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
-
+  
   // ============================================================================
   // STEP 1: HOOKS AND STATE DECLARATIONS - การประกาศ Hooks และ State
   // ============================================================================
-
+  
   /**
    * React และ Next.js Hooks
-   *
+   * 
    * Variables:
    * - state: สถานะของ sidebar (collapsed/expanded)
    * - pathname: path ปัจจุบันของ URL
@@ -529,10 +529,10 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
   const pathname = usePathname()                                             // path ปัจจุบันของ URL
   const router = useRouter()                                                 // router สำหรับการนำทาง
   const { resetChat } = useChatContext()                                     // ฟังก์ชันรีเซ็ต chat จาก context
-
+  
   /**
    * Local State Variables
-   *
+   * 
    * Variables:
    * - isSettingsOpen: สถานะการเปิด/ปิด settings dialog
    * - deleteDialogOpen: สถานะการเปิด/ปิด delete confirmation dialog
@@ -541,10 +541,10 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)               // สถานะการเปิด/ปิด settings dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)           // สถานะการเปิด/ปิด delete confirmation dialog
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null) // ID ของ session ที่จะลบ
-
+  
   /**
    * Custom Hook สำหรับจัดการ Chat Sessions
-   *
+   * 
    * Returns:
    * - sessions: array ของ chat sessions
    * - loading: สถานะการโหลดข้อมูล
@@ -552,10 +552,10 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
    * - deleteSession: ฟังก์ชันลบ session
    */
   const { sessions, loading, fetchSessions, deleteSession } = useChatSessions(userId)
-
+  
   /**
    * จัดกลุ่ม sessions ตามวันที่
-   *
+   * 
    * Purpose:
    * - จัดระเบียบการแสดงผลให้ดูง่าย
    * - กลุ่มตามช่วงเวลา (Today, Yesterday, Last 7 days, etc.)
@@ -568,12 +568,12 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
   /**
    * Effect สำหรับดึงข้อมูล sessions เมื่อ component mount หรือ userId เปลี่ยน
-   *
+   * 
    * Purpose:
    * - โหลดรายการ chat sessions ของผู้ใช้
    * - รีเฟรชข้อมูลเมื่อมีการเปลี่ยน userId
    * - ป้องกันการเรียก API เมื่อไม่มี userId
-   *
+   * 
    * Dependencies: [userId]
    * Note: ปิด eslint rule เพราะ fetchSessions มาจาก hook และไม่จำเป็นต้องใส่ใน dependency
    */
@@ -589,13 +589,13 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
   /**
    * ฟังก์ชันสำหรับจัดการปุ่ม New Chat
-   *
+   * 
    * Purpose:
    * - รีเซ็ต chat state เพื่อเริ่มการสนทนาใหม่
    * - เคลียร์ sessionId จาก localStorage
    * - นำทางไปหน้า welcome screen
    * - จัดการ error handling
-   *
+   * 
    * Process:
    * 1. ตรวจสอบ userId
    * 2. รีเซ็ต chat state
@@ -604,17 +604,17 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
    */
   const handleNewChat = async () => {
     if (!userId) return                                                      // ป้องกันการทำงานเมื่อไม่มี userId
-
+    
     try {
       // รีเซ็ต chat state
       resetChat()                                                            // เรียกฟังก์ชันรีเซ็ตจาก context
-
+      
       // เคลียร์ sessionId จาก localStorage
       localStorage.removeItem('currentSessionId')                           // ลบ session ID ที่เก็บไว้
-
+      
       // ไปหน้า New Chat (Welcome screen) โดยไม่สร้าง session ใหม่ทันที
       router.push("/chat")                                                   // นำทางไปหน้า chat
-
+      
     } catch (error) {
       console.error('Error navigating to new chat:', error)
       // ถ้ามีข้อผิดพลาด ไปหน้า chat ปกติ
@@ -624,27 +624,27 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
   /**
    * ฟังก์ชันสำหรับจัดการการลบ Session
-   *
+   * 
    * Purpose:
    * - เปิด confirmation dialog สำหรับการลบ
    * - ป้องกัน navigation เมื่อคลิกปุ่มลบ
    * - ตั้งค่า session ที่จะลบ
-   *
+   * 
    * Process:
    * 1. ป้องกัน event propagation
    * 2. ตรวจสอบ userId
    * 3. เก็บ sessionId ที่จะลบ
    * 4. เปิด confirmation dialog
-   *
+   * 
    * @param sessionId - ID ของ session ที่จะลบ
    * @param e - React Mouse Event
    */
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.preventDefault()                                                       // ป้องกันการนำทางไป Link
     e.stopPropagation()                                                      // ป้องกัน event bubbling
-
+    
     if (!userId) return                                                      // ป้องกันการทำงานเมื่อไม่มี userId
-
+    
     // เปิด Alert Dialog
     setSessionToDelete(sessionId)                                            // เก็บ ID ของ session ที่จะลบ
     setDeleteDialogOpen(true)                                                // เปิด confirmation dialog
@@ -652,13 +652,13 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
   /**
    * ฟังก์ชันสำหรับยืนยันการลบ Session
-   *
+   * 
    * Purpose:
    * - ลบ session จาก database
    * - จัดการการนำทางถ้าลบ session ปัจจุบัน
    * - รีเฟรชรายการ sessions
    * - ปิด dialog และเคลียร์ state
-   *
+   * 
    * Process:
    * 1. ตรวจสอบ sessionToDelete
    * 2. เรียก API ลบ session
@@ -668,7 +668,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
    */
   const confirmDeleteSession = async () => {
     if (!sessionToDelete) return                                             // ป้องกันการทำงานเมื่อไม่มี sessionToDelete
-
+    
     try {
       const success = await deleteSession(sessionToDelete)                   // เรียก API ลบ session
       if (success) {
@@ -696,7 +696,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
   /**
    * Main render section - ส่วนแสดงผลหลักของ ChatSidebar
-   *
+   * 
    * Structure:
    * 1. Sidebar Header - ส่วนหัวพร้อม logo และ controls
    * 2. Sidebar Content - เนื้อหาหลักและรายการ sessions
@@ -705,26 +705,26 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
    */
   return (
     <Sidebar collapsible="icon">                                            {/* Sidebar component ที่ collapsible ได้ */}
-
+      
       {/* ============================================================================ */}
       {/* SIDEBAR HEADER - ส่วนหัวของ Sidebar */}
       {/* ============================================================================ */}
-
+      
       <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-2 py-4">
-
+        
         {/* Logo และ App Name */}
         <div className="flex flex-row items-center gap-2 px-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
           {/* AI Logo */}
           <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
             <span className="text-white font-bold text-sm">AI</span>
           </div>
-
+          
           {/* App Name - ซ่อนเมื่อ sidebar collapsed */}
           <div className="text-md font-bold text-slate-900 dark:text-white tracking-tight group-data-[collapsible=icon]:hidden">
             Genius AI
           </div>
         </div>
-
+        
         {/* Control Buttons - ซ่อนเมื่อ sidebar collapsed */}
         <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
 
@@ -744,13 +744,13 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       {/* ============================================================================ */}
       {/* SIDEBAR CONTENT - เนื้อหาหลักของ Sidebar */}
       {/* ============================================================================ */}
-
+      
       <SidebarContent className="pt-4">
-
+        
         {/* ============================================================================ */}
         {/* NEW CHAT BUTTON - ปุ่มสร้างการสนทนาใหม่ */}
         {/* ============================================================================ */}
-
+        
         <div className="px-4 group-data-[collapsible=icon]:px-2">
           <Button
             variant="outline"
@@ -768,7 +768,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         {/* ============================================================================ */}
         {/* LOADING STATE - สถานะการโหลด */}
         {/* ============================================================================ */}
-
+        
         {/* Loading state */}
         {loading && (
           <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -779,7 +779,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         {/* ============================================================================ */}
         {/* CHAT SESSIONS LIST - รายการประวัติการสนทนา */}
         {/* ============================================================================ */}
-
+        
         {/* Chat sessions grouped by date */}
         {!loading && groupedSessions.map((group) => (
           <SidebarGroup
@@ -804,7 +804,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
                       </span>
                     </SidebarMenuButton>
                   </Link>
-
+                  
                   {/* Delete Button - ปุ่มลบ session */}
                   <button
                     onClick={(e) => handleDeleteSession(session.id, e)}
@@ -822,7 +822,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         {/* ============================================================================ */}
         {/* EMPTY STATE - สถานะเมื่อไม่มีข้อมูล */}
         {/* ============================================================================ */}
-
+        
         {/* Empty state */}
         {!loading && groupedSessions.length === 0 && (
           <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -837,15 +837,15 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       {/* ============================================================================ */}
       {/* SIDEBAR FOOTER - ส่วนท้ายพร้อม User Profile */}
       {/* ============================================================================ */}
-
+      
       {/* User Profile Footer */}
       <SidebarFooter className="p-4 border-t border-slate-200 dark:border-slate-700 group-data-[collapsible=icon]:p-2">
         <Popover>
           <PopoverTrigger asChild>
-
+            
             {/* User Profile Button */}
             <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1data-[state=open]:bg-slate-100 dark:data-[state=open]:bg-slate-800">
-
+              
               {/* User Avatar */}
               <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
                 <span className="text-white font-semibold text-sm group-data-[collapsible=icon]:text-xs">
@@ -855,7 +855,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
                     : email.charAt(0).toUpperCase()}
                 </span>
               </div>
-
+              
               {/* User Info - ซ่อนเมื่อ collapsed */}
               <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                 <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
@@ -867,14 +867,14 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
               </div>
             </div>
           </PopoverTrigger>
-
+          
           {/* ============================================================================ */}
           {/* USER PROFILE POPOVER - เมนูผู้ใช้ */}
           {/* ============================================================================ */}
-
+          
           <PopoverContent side="top" align="start" className="w-80 p-0">
             <div className="space-y-0">
-
+              
               {/* User Info Header */}
               <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-700">
                 {/* User Avatar */}
@@ -885,7 +885,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
                       : email.charAt(0).toUpperCase()}
                   </span>
                 </div>
-
+                
                 {/* User Details */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
@@ -899,7 +899,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
               {/* Menu Items */}
               <div className="p-2 space-y-1">
-
+                
                 {/* Upgrade Plan Button */}
                 <Button
                   variant="ghost"
@@ -943,9 +943,9 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       {/* ============================================================================ */}
       {/* DIALOGS - Settings Dialog และ Delete Confirmation */}
       {/* ============================================================================ */}
-
+      
       {/* Settings Dialog */}
-      <SettingsDialog
+      <SettingsDialog 
         isOpen={isSettingsOpen}                                             // สถานะการเปิด/ปิด
         onClose={() => setIsSettingsOpen(false)}                           // callback สำหรับปิด dialog
       />
@@ -967,9 +967,9 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
             }}>
               ยกเลิก
             </AlertDialogCancel>
-
+            
             {/* Confirm Delete Button */}
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={confirmDeleteSession}                                 // เรียกฟังก์ชันยืนยันการลบ
               className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
             >

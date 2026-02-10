@@ -20,11 +20,11 @@ const Message = ({ children, className, isAssistant = false, bubbleStyle = false
     if (isAssistant) {
       // AI messages: เต็มความกว้าง, ไม่ต้องใช้ flex-col
       return (
-        <div
+        <div 
           className={cn(
             "group w-full",
             className
-          )}
+          )} 
           {...props}
         >
           {children}
@@ -33,11 +33,11 @@ const Message = ({ children, className, isAssistant = false, bubbleStyle = false
     } else {
       // User messages: แบบ bubble ด้านขวา
       return (
-        <div
+        <div 
           className={cn(
             "group flex flex-col items-end",
             className
-          )}
+          )} 
           {...props}
         >
           {children}
@@ -45,7 +45,7 @@ const Message = ({ children, className, isAssistant = false, bubbleStyle = false
       )
     }
   }
-
+  
   return (
     <div className={cn("flex gap-3", className)} {...props}>
       {children}
@@ -96,7 +96,7 @@ const MessageContent = ({
   ...props
 }: MessageContentProps) => {
   let classNames
-
+  
   if (bubbleStyle) {
     if (isAssistant) {
       // AI messages: เต็มความกว้าง
@@ -147,25 +147,25 @@ const MessageActions = ({
   ...props
 }: MessageActionsProps) => {
   let classNames
-
+  
   if (bubbleStyle) {
     if (isAssistant) {
       // AI messages: ชิดซ้าย
       classNames = cn(
-        "flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2 justify-start ml-2",
+        "flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2 justify-start ml-2 relative z-10",
         className
       )
     } else {
       // User messages: ชิดขวา
       classNames = cn(
-        "flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2 justify-end mr-2",
+        "flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-2 justify-end mr-2 relative z-10",
         className
       )
     }
   } else {
-    classNames = cn("text-muted-foreground flex items-center gap-2", className)
+    classNames = cn("text-muted-foreground flex items-center gap-2 relative z-10", className)
   }
-
+  
   return (
     <div className={classNames} {...props}>
       {children}
@@ -189,7 +189,7 @@ const MessageAction = ({
   bubbleStyle = false,
   ...props
 }: MessageActionProps) => {
-  const buttonClassName = bubbleStyle
+  const buttonClassName = bubbleStyle 
     ? "h-7 w-7 p-0 text-gray-500 hover:text-gray-700 rounded-full"
     : ""
 

@@ -2331,7 +2331,7 @@ npm install -D @types/pg
 ```
 
 #### 4. สร้าง API Routes
-สร้างไฟล์ `app/api/chat_05_history/route.ts`
+สร้างไฟล์ `app/api/chat_06_history_optimize/route.ts`
 ```ts
 import { NextRequest } from "next/server"
 import { ChatOpenAI } from "@langchain/openai"

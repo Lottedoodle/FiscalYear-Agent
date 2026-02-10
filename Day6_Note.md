@@ -23,7 +23,7 @@ npm install @types/katex --save-dev
 
 #### 2. อัพเดทไฟล์ route.ts
 
-แก้ไขไฟล์ `src/app/api/chat_05_history/route.ts`
+แก้ไขไฟล์ `src/app/api/chat_06_history_optimize/route.ts`
 
 ```typescript {.line-numbers}
 /**
@@ -1277,7 +1277,7 @@ export function NewChat() {
 
     try {
       // เรียก API เพื่อดึงประวัติการสนทนา
-      const response = await fetch(`/api/chat_05_history?sessionId=${sessionIdToLoad}`)
+      const response = await fetch(`/api/chat_06_history_optimize?sessionId=${sessionIdToLoad}`)
 
       // ตรวจสอบว่า API response สำเร็จหรือไม่
       if (!response.ok) {
@@ -1347,7 +1347,7 @@ export function NewChat() {
      * - บันทึก session ID ไว้ใน localStorage
      */
     transport: createCustomChatTransport({
-      api: '/api/chat_05_history',                                           // API endpoint สำหรับส่งข้อความ
+      api: '/api/chat_06_history_optimize',                                           // API endpoint สำหรับส่งข้อความ
 
       /**
        * Callback function ที่ทำงานเมื่อได้รับ response
@@ -2069,7 +2069,7 @@ export function NewChat() {
 
 #### 8. เพิ่ม Chat Session Management API Routes
 
-สร้างไฟล์ `app/api/chat_05_history/session/route.ts` เพื่อจัดการการสร้างและลบ chat sessions
+สร้างไฟล์ `app/api/chat_06_history_optimize/session/route.ts` เพื่อจัดการการสร้างและลบ chat sessions
 
 ```typescript {.line-numbers}
 /**
@@ -3121,7 +3121,7 @@ export function useChatSessions(userId?: string) {
        * - sessions: array ของ ChatSession objects
        */
       const response = await fetch(
-        `/api/chat_05_history/session?userId=${encodeURIComponent(userId)}`,
+        `/api/chat_06_history_optimize/session?userId=${encodeURIComponent(userId)}`,
       );
 
       /**
@@ -3240,7 +3240,7 @@ export function useChatSessions(userId?: string) {
        * Expected Response:
        * - session: ChatSession object ที่สร้างใหม่
        */
-      const response = await fetch("/api/chat_05_history/session", {
+      const response = await fetch("/api/chat_06_history_optimize/session", {
         method: "POST", // HTTP POST method
         headers: {
           "Content-Type": "application/json", // กำหนด content type
@@ -3364,7 +3364,7 @@ export function useChatSessions(userId?: string) {
        * Expected Response:
        * - session: ChatSession object ที่อัปเดตแล้ว
        */
-      const response = await fetch("/api/chat_05_history/session", {
+      const response = await fetch("/api/chat_06_history_optimize/session", {
         method: "PUT", // HTTP PUT method
         headers: {
           "Content-Type": "application/json", // กำหนด content type
@@ -3451,7 +3451,7 @@ export function useChatSessions(userId?: string) {
 
     try {
       const response = await fetch(
-        `/api/chat_05_history/session?sessionId=${sessionId}`,
+        `/api/chat_06_history_optimize/session?sessionId=${sessionId}`,
         {
           method: "DELETE",
         },
@@ -3642,7 +3642,7 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
 
       try {
         // Step 4: ส่ง request ไปยัง API
-        const response = await fetch("/api/chat_05_history", {
+        const response = await fetch("/api/chat_06_history_optimize", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3760,7 +3760,7 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
     try {
       // Step 2: ส่ง request ไป API สำหรับดึงประวัติ
       const response = await fetch(
-        `/api/chat_05_history?sessionId=${sessionId}`,
+        `/api/chat_06_history_optimize?sessionId=${sessionId}`,
       );
 
       if (!response.ok) {

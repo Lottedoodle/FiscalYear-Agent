@@ -46,7 +46,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
   // เพิ่มการจัดการ autoComplete ใน handleSubmit
   const handleFillDemo = () => {
-    setEmail('skydown@gmail.com')
+    setEmail('samit@email.com')
     setPassword('123456')
   }
 
@@ -59,7 +59,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
           <div className="mt-2 px-4 bg-yellow-300 p-2 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-800">Email: skydown@gmail.com</p>
+                <p className="text-sm text-gray-800">Email: samit@email.com</p>
                 <p className="text-sm text-gray-800">Password: 123456</p>
               </div>
               <Button 

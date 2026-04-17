@@ -3,24 +3,24 @@
  * Chat Sessions Management Hook
  * ===============================================
  * 
- * Purpose: จัดการ CRUD operations สำหรับ chat sessions
+ * Purpose: Manage CRUD operations for chat sessions
  * 
  * Features:
- * - ดึงรายการ chat sessions ทั้งหมด
- * - สร้าง session ใหม่
- * - อัปเดต title ของ session
- * - ลบ session และข้อมูลที่เกี่ยวข้อง
- * - จัดการ loading states และ errors
+ * - Fetch all chat sessions
+ * - Create new session
+ * - Update session title
+ * - Delete session and related data
+ * - Manage loading states and errors
  * 
  * Hook Pattern: Custom React Hook
- * - ใช้ useState สำหรับ state management
- * - ใช้ useEffect สำหรับ data fetching
- * - ส่งคืน object ที่มี state และ functions
+ * - Use useState for state management
+ * - Use useEffect for data fetching
+ * - Returns an object containing state and functions
  * 
  * API Integration:
- * - เชื่อมต่อกับ session API endpoints
- * - รองรับ GET, POST, PUT, DELETE methods
- * - จัดการ authentication ด้วย userId
+ * - Connect to session API endpoints
+ * - Supports GET, POST, PUT, DELETE methods
+ * - Handle authentication using userId
  */
 
 "use client"
@@ -29,23 +29,23 @@ import { useState, useEffect } from 'react'
 import { API_BASE_SESSION, buildApiUrl } from '@/constants/api'
 
 // ===============================================
-// TypeScript Interface Definitions - กำหนด Type Definitions
+// TypeScript Interface Definitions
 // ===============================================
 
 /**
- * Interface สำหรับ Chat Session object
+ * Interface for Chat Session object
  * 
  * Properties:
- * - id: ID เฉพาะของ session
- * - title: ชื่อของ session
- * - created_at: เวลาที่สร้าง session
- * - message_count: จำนวนข้อความใน session
+ * - id: Unique ID of the session
+ * - title: Title of the session
+ * - created_at: Time the session was created
+ * - message_count: Number of messages in the session
  */
 export interface ChatSession {
-  id: string                                                                // ID เฉพาะของ session
-  title: string                                                             // ชื่อของ session
-  created_at: string                                                        // เวลาที่สร้าง (ISO string)
-  message_count: number                                                     // จำนวนข้อความใน session
+  id: string                                                                // Unique session ID
+  title: string                                                             // Session title
+  created_at: string                                                        // Creation time (ISO string)
+  message_count: number                                                     // Number of messages in the session
 }
 
 // ===============================================
@@ -53,438 +53,438 @@ export interface ChatSession {
 // ===============================================
 
 /**
- * useChatSessions Hook: จัดการ CRUD operations สำหรับ chat sessions
+ * useChatSessions Hook: Manages CRUD operations for chat sessions
  * 
  * Purpose:
- * - จัดการรายการ chat sessions ของผู้ใช้
- * - ให้ functions สำหรับ create, read, update, delete sessions
- * - จัดการ loading states และ error handling
- * - อัปเดต local state เมื่อมีการเปลี่ยนแปลง
+ * - Manage user's chat sessions list
+ * - Provide functions for create, read, update, and delete sessions
+ * - Handle loading states and error handling
+ * - Update local state on changes
  * 
  * Parameters:
- * - userId: ID ของผู้ใช้สำหรับกรองข้อมูล (optional)
+ * - userId: User ID for filtering (optional)
  * 
- * @param userId - User ID สำหรับ authentication และ filtering
- * @returns Object ที่มี state และ functions สำหรับจัดการ sessions
+ * @param userId - User ID for authentication and filtering
+ * @returns Object containing state and functions for managing sessions
  */
 export function useChatSessions(userId?: string) {
   // ===============================================
-  // Step 1: State Management - จัดการ State ต่างๆ
+  // Step 1: State Management
   // ===============================================
   
   /**
-   * State สำหรับเก็บรายการ chat sessions
+   * State to store chat sessions list
    * 
    * Usage:
-   * - เก็บ sessions ทั้งหมดของผู้ใช้
-   * - แสดงใน sidebar หรือ session list
-   * - อัปเดตเมื่อมีการเปลี่ยนแปลง
+   * - Store all user sessions
+   * - Display in sidebar or session list
+   * - Update when changes occur
    */
-  const [sessions, setSessions] = useState<ChatSession[]>([])              // รายการ chat sessions
+  const [sessions, setSessions] = useState<ChatSession[]>([])              // Chat sessions list
   
   /**
-   * State สำหรับสถานะการโหลดข้อมูล
+   * State for data loading status
    * 
    * Usage:
-   * - true: กำลังโหลดข้อมูล (แสดง loading indicator)
-   * - false: โหลดเสร็จแล้วหรือยังไม่ได้โหลด
+   * - true: Loading data (show loading indicator)
+   * - false: Loading complete or not started
    */
-  const [loading, setLoading] = useState(false)                            // สถานะการโหลด
+  const [loading, setLoading] = useState(false)                            // Loading status
   
   /**
-   * State สำหรับข้อผิดพลาด
+   * State for error handling
    * 
    * Usage:
-   * - null: ไม่มีข้อผิดพลาด
-   * - string: ข้อความ error ที่เกิดขึ้น
+   * - null: No errors
+   * - string: Error message that occurred
    */
-  const [error, setError] = useState<string | null>(null)                  // ข้อผิดพลาด
+  const [error, setError] = useState<string | null>(null)                  // Error state
 
   // ===============================================
-  // Step 2: Fetch Sessions Function - ฟังก์ชันดึงรายการ Sessions
+  // Step 2: Fetch Sessions Function
   // ===============================================
   
   /**
-   * ฟังก์ชันดึงรายการ chat sessions จาก server
+   * Function to fetch chat sessions list from server
    * 
    * Purpose:
-   * - ดึงข้อมูล sessions ทั้งหมดของผู้ใช้
-   * - อัปเดต sessions state ด้วยข้อมูลที่ได้
-   * - จัดการ loading state และ errors
+   * - Fetch all user sessions
+   * - Update sessions state with retrieved data
+   * - Manage loading state and errors
    * 
    * Process Flow:
-   * 1. ตรวจสอบ userId
-   * 2. ตั้งค่า loading state
-   * 3. ส่ง GET request ไปยัง API
-   * 4. ประมวลผล response data
-   * 5. อัปเดต state ด้วยข้อมูลที่ได้
-   * 6. จัดการ errors หากเกิดขึ้น
+   * 1. Validate userId
+   * 2. Set loading state
+   * 3. Send GET request to API
+   * 4. Process response data
+   * 5. Update state with retrieved data
+   * 6. Handle errors if any
    */
   const fetchSessions = async () => {
     // ===============================================
-    // Step 2.1: User ID Validation - ตรวจสอบ User ID
+    // Step 2.1: User ID Validation
     // ===============================================
     
     /**
-     * ตรวจสอบว่ามี userId หรือไม่
+     * Check if userId exists
      * 
      * Validation:
-     * - userId เป็น required parameter
-     * - หากไม่มี userId ให้ออกจากฟังก์ชัน
+     * - userId is a required parameter
+     * - If no userId, exit the function
      */
-    if (!userId) return                                                     // ออกจากฟังก์ชันหากไม่มี userId
+    if (!userId) return                                                     // Exit if no userId
     
     // ===============================================
-    // Step 2.2: Set Loading State - ตั้งค่าสถานะ Loading
+    // Step 2.2: Set Loading State
     // ===============================================
     
     /**
-     * ตั้งค่า loading state และ reset error
+     * Set loading state and reset error
      * 
      * Purpose:
-     * - แสดง loading indicator ใน UI
-     * - ล้าง error ก่อนหน้า
-     * - ป้องกันการเรียกใช้ซ้ำ
+     * - Show loading indicator in UI
+     * - Clear previous error
+     * - Prevent redundant calls
      */
-    setLoading(true)                                                        // เริ่ม loading
-    setError(null)                                                          // ล้าง error
+    setLoading(true)                                                        // Start loading
+    setError(null)                                                          // Reset error
     
     try {
       // ===============================================
-      // Step 2.3: API Request - ส่ง Request ไปยัง API
+      // Step 2.3: API Request
       // ===============================================
       
       /**
-       * ส่ง GET request ไปยัง session API
+       * Send GET request to session API
        * 
        * API Endpoint: SESSION API
-       * Query Parameter: userId (encoded สำหรับความปลอดภัย)
+       * Query Parameter: userId (encoded for security)
        * 
        * Expected Response:
-       * - sessions: array ของ ChatSession objects
+       * - sessions: array of ChatSession objects
        */
       const apiUrl = buildApiUrl(API_BASE_SESSION, { userId })
       const response = await fetch(apiUrl)
       
       /**
-       * ตรวจสอบ HTTP response status
+       * Validate HTTP response status
        * 
        * Error Handling:
-       * - ถ้า response ไม่ ok ให้ throw error
+       * - If response is not ok, throw error
        */
       if (!response.ok) {
-        throw new Error('Failed to fetch sessions')                        // ข้อผิดพลาดการดึงข้อมูล
+        throw new Error('Failed to fetch sessions')                        // Error fetching data
       }
       
       // ===============================================
-      // Step 2.4: Process Response Data - ประมวลผลข้อมูล Response
+      // Step 2.4: Process Response Data
       // ===============================================
       
       /**
-       * แปลง response เป็น JSON และดึงข้อมูล sessions
+       * Parse response as JSON and extract sessions
        * 
        * Data Structure:
-       * - data.sessions: array ของ sessions
-       * - หาก sessions ไม่มี ให้ใช้ empty array
+       * - data.sessions: array of sessions
+       * - If no sessions, use empty array
        */
-      const data = await response.json()                                    // แปลง response เป็น JSON
-      setSessions(data.sessions || [])                                      // อัปเดต sessions state
+      const data = await response.json()                                    // Parse response as JSON
+      setSessions(data.sessions || [])                                      // Update sessions state
     } catch (err) {
       // ===============================================
-      // Step 2.5: Error Handling - จัดการข้อผิดพลาด
+      // Step 2.5: Error Handling
       // ===============================================
       
       /**
-       * จัดการข้อผิดพลาดที่เกิดขึ้นระหว่างการดึงข้อมูล
+       * Handle errors occurring during data fetching
        * 
        * Error Recovery:
-       * - ตั้งค่า error message สำหรับแสดงให้ผู้ใช้
-       * - ให้ผู้ใช้ลองดึงข้อมูลใหม่ได้
+       * - Set error message to display to user
+       * - Allow user to retry fetching
        */
-      setError(err instanceof Error ? err.message : 'Unknown error')       // ตั้งค่า error message
+      setError(err instanceof Error ? err.message : 'Unknown error')       // Set error message
     } finally {
       // ===============================================
-      // Step 2.6: Cleanup - ล้างสถานะ Loading
+      // Step 2.6: Cleanup - Clear loading state
       // ===============================================
       
       /**
-       * ล้างสถานะ loading เมื่อเสร็จสิ้น
+       * Clear loading state on completion
        * 
        * Purpose:
-       * - ซ่อน loading indicator
-       * - รันไม่ว่าจะสำเร็จหรือเกิด error
+       * - Hide loading indicator
+       * - Runs regardless of success or error
        */
-      setLoading(false)                                                     // หยุด loading
+      setLoading(false)                                                     // Stop loading
     }
   }
 
   // ===============================================
-  // Step 3: Create Session Function - ฟังก์ชันสร้าง Session ใหม่
+  // Step 3: Create Session Function
   // ===============================================
   
   /**
-   * ฟังก์ชันสร้าง chat session ใหม่
+   * Function to create a new chat session
    * 
    * Purpose:
-   * - สร้าง session ใหม่สำหรับผู้ใช้
-   * - อัปเดต local sessions list
-   * - คืนค่า session object ที่สร้างใหม่
+   * - Create new session for user
+   * - Update local sessions list
+   * - Return the newly created session object
    * 
    * Process Flow:
-   * 1. ตรวจสอบ userId
-   * 2. ส่ง POST request ไปยัง API
-   * 3. ประมวลผล response data
-   * 4. อัปเดต sessions state
-   * 5. คืนค่า session ใหม่
+   * 1. Validate userId
+   * 2. Send POST request to API
+   * 3. Process response data
+   * 4. Update sessions state
+   * 5. Return new session
    * 
-   * @param title - ชื่อของ session (optional)
-   * @returns ChatSession object หรือ null หากเกิด error
+   * @param title - Session title (optional)
+   * @returns ChatSession object or null if error occurs
    */
   const createSession = async (title?: string) => {
     // ===============================================
-    // Step 3.1: User ID Validation - ตรวจสอบ User ID
+    // Step 3.1: User ID Validation
     // ===============================================
     
     /**
-     * ตรวจสอบว่ามี userId หรือไม่
+     * Check if userId exists
      * 
      * Validation:
-     * - userId เป็น required parameter สำหรับสร้าง session
-     * - หากไม่มี userId ให้คืนค่า null
+     * - userId is a required parameter for creating a session
+     * - If no userId, return null
      */
-    if (!userId) return null                                                // คืนค่า null หากไม่มี userId
+    if (!userId) return null                                                // Return null if no userId
     
     // ===============================================
-    // Step 3.2: Reset Error State - รีเซ็ต Error State
+    // Step 3.2: Reset Error State
     // ===============================================
     
     /**
-     * ล้าง error state ก่อนเริ่มการสร้าง session
+     * Clear error state before starting session creation
      * 
      * Purpose:
-     * - ล้าง error ก่อนหน้า
-     * - เตรียมพร้อมสำหรับ operation ใหม่
+     * - Clear previous error
+     * - Prepare for new operation
      */
-    setError(null)                                                          // ล้าง error
+    setError(null)                                                          // Reset error
     
     try {
       // ===============================================
-      // Step 3.3: API Request - ส่ง Request ไปยัง API
+      // Step 3.3: API Request
       // ===============================================
       
       /**
-       * ส่ง POST request ไปยัง session API
+       * Send POST request to session API
        * 
        * API Endpoint: SESSION API
        * Method: POST
        * Body: { title, userId }
        * 
        * Expected Response:
-       * - session: ChatSession object ที่สร้างใหม่
+       * - session: Newly created ChatSession object
        */
       const response = await fetch(API_BASE_SESSION, {
         method: 'POST',                                                     // HTTP POST method
         headers: {
-          'Content-Type': 'application/json',                              // กำหนด content type
+          'Content-Type': 'application/json',                              // Set content type
         },
-        body: JSON.stringify({ title, userId }),                           // ข้อมูลสำหรับสร้าง session
+        body: JSON.stringify({ title, userId }),                           // Session creation data
       })
       
       /**
-       * ตรวจสอบ HTTP response status
+       * Validate HTTP response status
        * 
        * Error Handling:
-       * - ถ้า response ไม่ ok ให้ throw error
+       * - If response is not ok, throw error
        */
       if (!response.ok) {
-        throw new Error('Failed to create session')                        // ข้อผิดพลาดการสร้าง session
+        throw new Error('Failed to create session')                        // Error creating session
       }
       
       // ===============================================
-      // Step 3.4: Process Response Data - ประมวลผลข้อมูล Response
+      // Step 3.4: Process Response Data
       // ===============================================
       
       /**
-       * แปลง response เป็น JSON และดึงข้อมูล session ใหม่
+       * Parse response as JSON and extract new session
        * 
        * Data Structure:
-       * - data.session: ChatSession object ที่เพิ่งสร้าง
+       * - data.session: Newly created ChatSession object
        */
-      const data = await response.json()                                    // แปลง response เป็น JSON
-      const newSession = data.session                                       // ดึง session object
+      const data = await response.json()                                    // Parse response as JSON
+      const newSession = data.session                                       // Extract session object
       
       // ===============================================
-      // Step 3.5: Update Local State - อัปเดต Local State
+      // Step 3.5: Update Local State
       // ===============================================
       
       /**
-       * เพิ่ม session ใหม่ที่ด้านบนของรายการ
+       * Add new session to the top of the list
        * 
        * Strategy:
-       * - ใส่ session ใหม่ไว้ด้านบน (เรียงตาม created_at ใหม่ไปเก่า)
-       * - ใช้ spread operator เพื่อรักษา immutability
+       * - Insert new session at top (sorted by created_at desc)
+       * - Use spread operator to maintain immutability
        */
-      setSessions(prev => [newSession, ...prev])                           // เพิ่ม session ใหม่ด้านบน
+      setSessions(prev => [newSession, ...prev])                           // Add new session to top
       
       // ===============================================
-      // Step 3.6: Return New Session - คืนค่า Session ใหม่
+      // Step 3.6: Return New Session
       // ===============================================
       
       /**
-       * คืนค่า session object ที่สร้างใหม่
+       * Return the newly created session object
        * 
        * Return Value:
-       * - ChatSession object สำหรับใช้งานต่อ
-       * - เช่น redirect ไปยัง session ใหม่
+       * - ChatSession object for further use
+       * - e.g., redirect to the new session
        */
-      return newSession                                                     // คืนค่า session ใหม่
+      return newSession                                                     // Return new session
     } catch (err) {
       // ===============================================
-      // Step 3.7: Error Handling - จัดการข้อผิดพลาด
+      // Step 3.7: Error Handling
       // ===============================================
       
       /**
-       * จัดการข้อผิดพลาดที่เกิดขึ้นระหว่างการสร้าง session
+       * Handle errors occurring during session creation
        * 
        * Error Recovery:
-       * - ตั้งค่า error message
-       * - คืนค่า null เพื่อบอกว่าสร้างไม่สำเร็จ
+       * - Set error message
+       * - Return null to indicate failure
        */
-      setError(err instanceof Error ? err.message : 'Unknown error')       // ตั้งค่า error message
-      return null                                                           // คืนค่า null หาก error
+      setError(err instanceof Error ? err.message : 'Unknown error')       // Set error message
+      return null                                                           // Return null if error
     }
   }
 
   // ===============================================
-  // Step 4: Update Session Title Function - ฟังก์ชันอัปเดต Title ของ Session
+  // Step 4: Update Session Title Function
   // ===============================================
   
   /**
-   * ฟังก์ชันอัปเดต title ของ session
+   * Function to update session title
    * 
    * Purpose:
-   * - แก้ไขชื่อของ session ที่มีอยู่
-   * - อัปเดต local sessions list
-   * - คืนค่า session object ที่อัปเดตแล้ว
+   * - Edit existing session title
+   * - Update local sessions list
+   * - Return the updated session object
    * 
    * Process Flow:
-   * 1. ส่ง PUT request ไปยัง API
-   * 2. ประมวลผล response data
-   * 3. อัปเดต sessions state
-   * 4. คืนค่า session ที่อัปเดต
+   * 1. Send PUT request to API
+   * 2. Process response data
+   * 3. Update sessions state
+   * 4. Return updated session
    * 
-   * @param sessionId - ID ของ session ที่จะอัปเดต
-   * @param title - ชื่อใหม่ของ session
-   * @returns ChatSession object หรือ null หากเกิด error
+   * @param sessionId - ID of the session to update
+   * @param title - New session title
+   * @returns ChatSession object or null if error occurs
    */
   const updateSessionTitle = async (sessionId: string, title: string) => {
     // ===============================================
-    // Step 4.1: Reset Error State - รีเซ็ต Error State
+    // Step 4.1: Reset Error State
     // ===============================================
     
     /**
-     * ล้าง error state ก่อนเริ่มการอัปเดต
+     * Clear error state before starting update
      * 
      * Purpose:
-     * - ล้าง error ก่อนหน้า
-     * - เตรียมพร้อมสำหรับ operation ใหม่
+     * - Clear previous error
+     * - Prepare for new operation
      */
-    setError(null)                                                          // ล้าง error
+    setError(null)                                                          // Reset error
     
     try {
       // ===============================================
-      // Step 4.2: API Request - ส่ง Request ไปยัง API
+      // Step 4.2: API Request
       // ===============================================
       
       /**
-       * ส่ง PUT request ไปยัง session API
+       * Send PUT request to session API
        * 
        * API Endpoint: SESSION API
        * Method: PUT
        * Body: { sessionId, title }
        * 
        * Expected Response:
-       * - session: ChatSession object ที่อัปเดตแล้ว
+       * - session: Updated ChatSession object
        */
       const response = await fetch(API_BASE_SESSION, {
         method: 'PUT',                                                      // HTTP PUT method
         headers: {
-          'Content-Type': 'application/json',                              // กำหนด content type
+          'Content-Type': 'application/json',                              // Set content type
         },
-        body: JSON.stringify({ sessionId, title }),                        // ข้อมูลสำหรับอัปเดต
+        body: JSON.stringify({ sessionId, title }),                        // Update data
       })
       
       /**
-       * ตรวจสอบ HTTP response status
+       * Validate HTTP response status
        * 
        * Error Handling:
-       * - ถ้า response ไม่ ok ให้ throw error
+       * - If response is not ok, throw error
        */
       if (!response.ok) {
-        throw new Error('Failed to update session')                        // ข้อผิดพลาดการอัปเดต session
+        throw new Error('Failed to update session')                        // Error updating session
       }
       
       // ===============================================
-      // Step 4.3: Process Response Data - ประมวลผลข้อมูล Response
+      // Step 4.3: Process Response Data
       // ===============================================
       
       /**
-       * แปลง response เป็น JSON และดึงข้อมูล session ที่อัปเดต
+       * Parse response as JSON and extract updated session
        * 
        * Data Structure:
-       * - data.session: ChatSession object ที่อัปเดตแล้ว
+       * - data.session: Updated ChatSession object
        */
-      const data = await response.json()                                    // แปลง response เป็น JSON
-      const updatedSession = data.session                                   // ดึง session object ที่อัปเดต
+      const data = await response.json()                                    // Parse response as JSON
+      const updatedSession = data.session                                   // Extract updated session object
       
       // ===============================================
-      // Step 4.4: Update Local State - อัปเดต Local State
+      // Step 4.4: Update Local State
       // ===============================================
       
       /**
-       * อัปเดต session ในรายการ local state
+       * Update session in local state list
        * 
        * Strategy:
-       * - ใช้ map เพื่อหา session ที่ต้องอัปเดต
-       * - อัปเดตเฉพาะ title ของ session นั้น
-       * - รักษา sessions อื่นไว้เหมือนเดิม
+       * - Use map to find session to update
+       * - Update only the title of that session
+       * - Keep other sessions unchanged
        */
       setSessions(prev => prev.map(session => 
         session.id === sessionId 
-          ? { ...session, title: updatedSession.title }                    // อัปเดต title ของ session นี้
-          : session                                                         // รักษา session อื่นไว้เหมือนเดิม
+          ? { ...session, title: updatedSession.title }                    // Update title for this session
+          : session                                                         // Keep other sessions unchanged
       ))
       
       // ===============================================
-      // Step 4.5: Return Updated Session - คืนค่า Session ที่อัปเดต
+      // Step 4.5: Return Updated Session
       // ===============================================
       
       /**
-       * คืนค่า session object ที่อัปเดตแล้ว
+       * Return the updated session object
        * 
        * Return Value:
-       * - ChatSession object สำหรับใช้งานต่อ
-       * - เช่น แสดงข้อความยืนยันการอัปเดต
+       * - ChatSession object for further use
+       * - e.g., show update confirmation message
        */
-      return updatedSession                                                 // คืนค่า session ที่อัปเดต
+      return updatedSession                                                 // Return updated session
     } catch (err) {
       // ===============================================
-      // Step 4.6: Error Handling - จัดการข้อผิดพลาด
+      // Step 4.6: Error Handling
       // ===============================================
       
       /**
-       * จัดการข้อผิดพลาดที่เกิดขึ้นระหว่างการอัปเดต session
+       * Handle errors occurring during session update
        * 
        * Error Recovery:
-       * - ตั้งค่า error message
-       * - คืนค่า null เพื่อบอกว่าอัปเดตไม่สำเร็จ
+       * - Set error message
+       * - Return null to indicate failure
        */
-      setError(err instanceof Error ? err.message : 'Unknown error')       // ตั้งค่า error message
-      return null                                                           // คืนค่า null หาก error
+      setError(err instanceof Error ? err.message : 'Unknown error')       // Set error message
+      return null                                                           // Return null if error
     }
   }
 
-  // ลบ session
+  // Delete session
   const deleteSession = async (sessionId: string) => {
     setError(null)
     
@@ -498,7 +498,7 @@ export function useChatSessions(userId?: string) {
         throw new Error('Failed to delete session')
       }
       
-      // ลบ session จากรายการ
+      // Remove session from list
       setSessions(prev => prev.filter(session => session.id !== sessionId))
       
       return true
@@ -508,10 +508,20 @@ export function useChatSessions(userId?: string) {
     }
   }
 
-  // ดึงข้อมูลเมื่อมี userId
+  // Fetch data when userId exists
   useEffect(() => {
     if (userId) {
       fetchSessions()
+    }
+
+    // Listen to event for updating sidebar when new session is created
+    const handleChatSessionCreated = () => {
+      if (userId) fetchSessions()
+    }
+    window.addEventListener('chat-session-created', handleChatSessionCreated)
+
+    return () => {
+      window.removeEventListener('chat-session-created', handleChatSessionCreated)
     }
   }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -62,7 +62,7 @@ export function AccountTab() {
               PlaceholderGeniusAI
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400">
-              By บริษัท ไอทีจีเนียส เอ็นจิเนียริ่ง จำกัด
+              By Company
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export function AccountTab() {
         </div>
 
         <div className="text-sm text-gray-900 dark:text-white mb-4">
-          บริษัท ไอทีจีเนียส เอ็นจิเนียริ่ง จำกัด
+          Company
         </div>
 
         {/* Links */}

@@ -3,19 +3,19 @@
  * Database Connection Pool Utility
  * ===============================================
  * 
- * Purpose: จัดการ PostgreSQL connection pool แบบ centralized
+ * Purpose: Manage PostgreSQL connection pool in a centralized manner
  * 
  * Features:
- * - Singleton pattern สำหรับ connection pool
+ * - Singleton pattern for connection pool
  * - Configuration management
- * - Error handling และ logging
+ * - Error handling and logging
  * - Type safety
  * 
  * Benefits:
- * - ลดการสร้าง connection pool ซ้ำๆ
- * - จัดการ configuration ในที่เดียว
- * - ง่ายต่อการ maintain และ debug
- * - รองรับ connection pooling อย่างมีประสิทธิภาพ
+ * - Reduce redundant connection pool creations
+ * - Manage configuration in one place
+ * - Easy to maintain and debug
+ * - Support efficient connection pooling
  */
 
 import { Pool, PoolConfig } from 'pg'
@@ -25,8 +25,8 @@ import { Pool, PoolConfig } from 'pg'
 // ===============================================
 
 /**
- * Interface สำหรับ database configuration
- * ใช้สำหรับ type checking และ documentation
+ * Interface for database configuration
+ * Used for type checking and documentation
  */
 interface DatabaseConfig {
   host: string
@@ -40,8 +40,13 @@ interface DatabaseConfig {
 // ===============================================
 // Configuration Setup
 // ===============================================
-function getDatabaseConfig(): DatabaseConfig {
-  // ตรวจสอบ required environment variables
+function getDatabaseConfig(): DatabaseConfig | null {
+  // Skip env vars check during build phase (Docker build)
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return null
+  }
+
+  // Validate required environment variables
   const requiredEnvVars = ['PG_HOST', 'PG_PORT', 'PG_USER', 'PG_PASSWORD', 'PG_DATABASE']
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
   
@@ -67,23 +72,30 @@ function getDatabaseConfig(): DatabaseConfig {
 let globalPool: Pool | null = null
 
 export function getDatabase(): Pool {
-  // หาก pool ยังไม่ถูกสร้าง ให้สร้างใหม่
+  // If pool doesn't exist, create a new one
   if (!globalPool) {
     try {
       const config = getDatabaseConfig()
       
-      // สร้าง pool configuration
+      // In build phase, create a dummy pool that doesn't actually connect
+      if (!config) {
+        console.log('⏭️ PostgreSQL: Skipping pool initialization during build phase')
+        globalPool = new Pool({ host: 'localhost', port: 5432, max: 1 })
+        return globalPool
+      }
+
+      // create pool configuration
       const poolConfig: PoolConfig = {
         ...config,
         // Pool-specific configurations
-        max: 20,                      // จำนวน connection สูงสุด
-        idleTimeoutMillis: 30000,     // timeout สำหรับ idle connections
-        connectionTimeoutMillis: 2000, // timeout สำหรับการเชื่อมต่อ
+        max: 20,                      
+        idleTimeoutMillis: 30000,     
+        connectionTimeoutMillis: 2000, 
       }
       
       globalPool = new Pool(poolConfig)
       
-    // ตั้งค่า event listeners สำหรับ monitoring
+    // setting event listeners for monitoring
     //   globalPool.on('connect', () => {
     //     console.log('🐘 PostgreSQL: New client connected')
     //   })
@@ -112,7 +124,7 @@ export async function testDatabaseConnection(): Promise<boolean> {
     const client = await pool.connect()
     
     try {
-      // ทดสอบด้วย simple query
+      // Test with a simple query
       await client.query('SELECT 1')
       console.log('✅ PostgreSQL: Connection test successful')
       return true

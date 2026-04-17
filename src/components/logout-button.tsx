@@ -11,7 +11,7 @@ export function LogoutButton() {
   const logout = async () => {
     const supabase = createClient()
 
-    // เคลียร์ currentSessionId จาก localStorage
+    // Clear currentSessionId from localStorage
     localStorage.removeItem('currentSessionId')
 
     await supabase.auth.signOut()

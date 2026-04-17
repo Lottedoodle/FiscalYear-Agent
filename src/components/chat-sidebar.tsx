@@ -1,38 +1,38 @@
 /**
  * ===============================================
- * Chat Sidebar Component - แถบด้านข้างสำหรับการนำทาง
+ * Chat Sidebar Component
  * ===============================================
  * 
- * Purpose: แถบด้านข้างสำหรับนำทางและจัดการประวัติการสนทนา
+ * Purpose: Sidebar for navigation and conversation history management
  * 
  * Features:
- * - แสดงรายการประวัติการสนทนาจัดกลุ่มตามวันที่
- * - สร้างการสนทนาใหม่
- * - ลบประวัติการสนทนา
- * - เปิด/ปิด sidebar (collapsible)
- * - การตั้งค่าผู้ใช้และแอปพลิเคชัน
- * - User profile และ logout
- * - Theme toggle (สลับธีม)
- * - Responsive design สำหรับ mobile/desktop
+ * - View chat history grouped by date
+ * - Create a new conversation
+ * - Delete conversation history
+ * - Toggle sidebar (collapsible)
+ * - User and application settings
+ * - User profile and logout
+ * - Theme toggle
+ * - Responsive design for mobile/desktop
  * 
  * Components:
- * - SettingsDialog: dialog สำหรับการตั้งค่าต่างๆ
- * - ChatSidebar: sidebar หลัก
+ * - SettingsDialog: Dialog for various settings
+ * - ChatSidebar: Main sidebar
  * 
  * Data Management:
- * - useChatSessions hook สำหรับจัดการข้อมูล sessions
- * - useChatContext สำหรับ state management
+ * - useChatSessions hook for sessions management
+ * - useChatContext for state management
  * 
- * Authentication: ต้องมี userId เพื่อเข้าถึงข้อมูล
- * Navigation: ใช้ Next.js router สำหรับการนำทาง
+ * Authentication: Requires userId to access data
+ * Navigation: Use Next.js router for navigation
  */
 
 "use client"
 
 // ============================================================================
-// IMPORTS - การนำเข้า Components และ Libraries ที่จำเป็น
+// IMPORTS
 // ============================================================================
-import { Button } from "@/components/ui/button"                             // Component ปุ่มพื้นฐาน
+import { Button } from "@/components/ui/button"                             // Basic button component
 import {
   Sidebar,
   SidebarContent,
@@ -43,12 +43,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   useSidebar,
-} from "@/components/ui/sidebar"                                             // Sidebar components และ hooks
+} from "@/components/ui/sidebar"                                             // Sidebar components and hooks
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"                                             // Popover สำหรับ user menu
+} from "@/components/ui/popover"                                             // Popover for user menu
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +58,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"                                        // Alert dialog สำหรับยืนยันการลบ
+} from "@/components/ui/alert-dialog"                                        // Alert dialog for delete confirmation
 import { 
   PlusIcon, 
   Search, 
@@ -73,15 +73,15 @@ import {
   Shield,
   UserCircle,
   Trash2
-} from "lucide-react"                                                        // Icons จาก Lucide React
-import { LogoutButton } from "@/components/logout-button"                   // Component สำหรับ logout
-import Link from "next/link"                                                 // Next.js Link สำหรับ navigation
-import { usePathname, useRouter } from "next/navigation"                     // Next.js hooks สำหรับ routing
+} from "lucide-react"                                                        // Icons from Lucide React
+import { LogoutButton } from "@/components/logout-button"                   // Component for logout
+import Link from "next/link"                                                 // Next.js Link for navigation
+import { usePathname, useRouter } from "next/navigation"                     // Next.js hooks for routing
 import { useState, useEffect, useRef } from "react"                          // React hooks
-import { createPortal } from "react-dom"                                     // Portal สำหรับ modal rendering
-import { useChatContext } from "@/contexts/chat-context"                     // Context สำหรับ chat state
-import { useChatSessions } from "@/hooks/use-chat-sessions"                  // Custom hook สำหรับ chat sessions
-import { groupSessionsByDate } from "@/lib/utils"                            // Utility สำหรับจัดกลุ่มตามวันที่
+import { createPortal } from "react-dom"                                     // Portal for modal rendering
+import { useChatContext } from "@/contexts/chat-context"                     // Context for chat state
+import { useChatSessions } from "@/hooks/use-chat-sessions"                  // Custom hook for chat sessions
+import { groupSessionsByDate } from "@/lib/utils"                            // Utility for grouping by date
 import {
   GeneralTab,
   NotificationsTab,
@@ -95,85 +95,85 @@ import {
 import { ThemeToggle } from "@/components/ui/theme-toggle"                   // Theme toggle component
 
 // ============================================================================
-// TypeScript Interface Definitions - กำหนด Type Definitions
+// TypeScript Interface Definitions
 // ============================================================================
 
 /**
- * Interface สำหรับ Props ของ ChatSidebar component
+ * Interface for ChatSidebar component Props
  * 
  * Structure:
- * - display_name: string - ชื่อแสดงผลของผู้ใช้
- * - email: string - อีเมลของผู้ใช้
- * - userId: string (optional) - ID ของผู้ใช้สำหรับ authentication
+ * - display_name: string - User's display name
+ * - email: string - User's email
+ * - userId: string (optional) - User ID for authentication
  */
 interface ChatSidebarProps {
-  display_name: string                                                       // ชื่อแสดงผลของผู้ใช้
-  email: string                                                              // อีเมลของผู้ใช้
-  userId?: string                                                            // ID ของผู้ใช้ (optional สำหรับ authentication)
+  display_name: string                                                       // User's display name
+  email: string                                                              // User's email
+  userId?: string                                                            // User ID (optional for authentication)
 }
 
 // ============================================================================
-// SETTINGS DIALOG COMPONENT - Component สำหรับ Settings Dialog
+// SETTINGS DIALOG COMPONENT
 // ============================================================================
 
 /**
- * SettingsDialog Component: Dialog สำหรับการตั้งค่าแอปพลิเคชัน
+ * SettingsDialog Component: Dialog for application settings
  * 
  * Purpose:
- * - แสดง settings ในรูปแบบ modal dialog
- * - รองรับ multiple tabs สำหรับหมวดหมู่ต่างๆ
- * - Responsive design สำหรับ mobile/desktop
- * - Portal rendering เพื่อแสดงนอก DOM tree
+ * - Display settings as a modal dialog
+ * - Support multiple tabs for different categories
+ * - Responsive design for mobile/desktop
+ * - Portal rendering to display outside DOM tree
  * 
  * Features:
- * - Tab navigation สำหรับหมวดหมู่ settings
- * - Horizontal scroll สำหรับ mobile tabs
- * - Backdrop click เพื่อปิด dialog
+ * - Tab navigation for setting categories
+ * - Horizontal scroll for mobile tabs
+ * - Backdrop click to close dialog
  * - Keyboard navigation support
  * 
- * @param isOpen - สถานะการเปิด/ปิด dialog
- * @param onClose - callback เมื่อปิด dialog
- * @returns JSX Element หรือ null
+ * @param isOpen - Status of dialog open/close
+ * @param onClose - callback when dialog is closed
+ * @returns JSX Element or null
  */
 function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   // ============================================================================
-  // STEP 1: STATE DECLARATIONS - การประกาศตัวแปร State
+  // STEP 1: STATE DECLARATIONS
   // ============================================================================
   
   /**
-   * สถานะของ Settings Dialog
+   * States of Settings Dialog
    * 
    * Variables:
-   * - activeTab: tab ที่เลือกในปัจจุบัน
-   * - mounted: สถานะการ mount ของ component
-   * - tabsContainerRef: reference สำหรับ tabs container
+   * - activeTab: currently selected tab
+   * - mounted: component mount status
+   * - tabsContainerRef: reference for tabs container
    */
-  const [activeTab, setActiveTab] = useState("general")                      // tab ที่เลือกในปัจจุบัน (เริ่มต้นที่ "general")
-  const [mounted, setMounted] = useState(false)                             // สถานะการ mount ของ component
-  const tabsContainerRef = useRef<HTMLDivElement>(null)                     // ref สำหรับ tabs container (สำหรับ scroll)
+  const [activeTab, setActiveTab] = useState("general")                      // currently selected tab (defaults to "general")
+  const [mounted, setMounted] = useState(false)                             // component mount status
+  const tabsContainerRef = useRef<HTMLDivElement>(null)                     // ref for tabs container (for scrolling)
 
   // ============================================================================
-  // STEP 2: EFFECTS - การจัดการ Side Effects
+  // STEP 2: EFFECTS - Managing Side Effects
   // ============================================================================
 
   /**
-   * Effect สำหรับตั้งค่า mounted state
+   * Effect to set mounted state
    * 
    * Purpose:
-   * - ป้องกัน hydration mismatch ใน SSR
-   * - ให้แน่ใจว่า component mount เสร็จแล้วก่อนแสดงผล
+   * - Prevent hydration mismatch in SSR
+   * - Ensure component is mounted before rendering
    */
   useEffect(() => {
-    setMounted(true)                                                         // ตั้งค่า mounted เป็น true เมื่อ component mount
+    setMounted(true)                                                         // set mounted to true when component mounts
   }, [])
 
   /**
-   * Effect สำหรับจัดการ horizontal scroll ใน mobile tabs
+   * Effect to handle horizontal scroll in mobile tabs
    * 
    * Purpose:
-   * - รองรับการ scroll ด้วย mouse wheel ใน tabs container
-   * - ปรับปรุง UX สำหรับ mobile devices
-   * - ใช้ native event listener สำหรับควบคุมที่ดีกว่า
+   * - Support scrolling with mouse wheel in tabs container
+   * - Improve UX for mobile devices
+   * - Use native event listener for better control
    * 
    * Dependencies: [mounted]
    */
@@ -192,17 +192,17 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
      */
     const handleWheel = (e: WheelEvent) => {
       if (e.deltaY !== 0) {
-        e.preventDefault()                                                   // ป้องกัน default scroll behavior
-        container.scrollLeft += e.deltaY > 0 ? 50 : -50                     // scroll ไปซ้าย/ขวา 50px
+        e.preventDefault()                                                   // prevent default scroll behavior
+        container.scrollLeft += e.deltaY > 0 ? 50 : -50                     // scroll left/right 50px
       }
     }
 
-    // เพิ่ม event listener แบบ non-passive
+    // Add non-passive event listener
     container.addEventListener('wheel', handleWheel, { passive: false })
 
     /**
      * Cleanup function
-     * ลบ event listener เมื่อ component unmount
+     * Remove event listener when component unmounts
      */
     return () => {
       container.removeEventListener('wheel', handleWheel)
@@ -210,34 +210,34 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   }, [mounted])
 
   // ============================================================================
-  // STEP 3: EVENT HANDLER FUNCTIONS - ฟังก์ชันจัดการ Events
+  // STEP 3: EVENT HANDLER FUNCTIONS
   // ============================================================================
 
   /**
-   * ฟังก์ชันสำหรับจัดการการเลือก tab และ scrolling
+   * Function to handle tab selection and scrolling
    * 
    * Purpose:
-   * - เปลี่ยน active tab
-   * - scroll ให้ tab ที่เลือกอยู่ในมุมมองที่เห็นได้
-   * - ปรับปรุง UX สำหรับ mobile navigation
+   * - Change active tab
+   * - Scroll the selected tab into view
+   * - Improve UX for mobile navigation
    * 
    * Process:
-   * 1. ตั้งค่า active tab
-   * 2. รอให้ DOM update
-   * 3. scroll ไปยัง tab ที่เลือก
+   * 1. Set active tab
+   * 2. Wait for DOM update
+   * 3. Scroll to the selected tab
    * 
-   * @param tabId - ID ของ tab ที่ต้องการเลือก
+   * @param tabId - ID of the tab to select
    */
   const handleTabClick = (tabId: string) => {
-    setActiveTab(tabId)                                                      // ตั้งค่า active tab
+    setActiveTab(tabId)                                                      // set active tab
     
-    // ให้แน่ใจว่า tab ที่คลิกจะอยู่ในมุมมองที่เห็นได้
+    // Ensure the clicked tab is in view
     setTimeout(() => {
       if (tabsContainerRef.current) {
-        // หา button element ของ tab ที่เลือก
+        // Find the button element of the selected tab
         const activeButton = tabsContainerRef.current.querySelector(`[data-tab-id="${tabId}"]`) as HTMLElement
         if (activeButton) {
-          // scroll ไปยัง tab ที่เลือกด้วย smooth animation
+          // scroll to selected tab with smooth animation
           activeButton.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'nearest', 
@@ -245,114 +245,114 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           })
         }
       }
-    }, 50)                                                                   // รอ 50ms ให้ DOM update
+    }, 50)                                                                   // Wait 50ms for DOM update
   }
 
   // ============================================================================
-  // STEP 4: RENDER GUARD - การตรวจสอบสถานะก่อนแสดงผล
+  // STEP 4: RENDER GUARD
   // ============================================================================
 
   /**
-   * ตรวจสอบสถานะก่อนแสดงผล dialog
+   * Check status before rendering dialog
    * 
    * Conditions:
-   * - ไม่แสดงถ้า isOpen = false
-   * - ไม่แสดงถ้า component ยังไม่ mount (ป้องกัน SSR issues)
+   * - Do not show if isOpen = false
+   * - Do not show if component is not mounted (prevents SSR issues)
    */
   if (!isOpen || !mounted) return null
 
   // ============================================================================
-  // STEP 5: TABS CONFIGURATION - การกำหนดค่า Tabs
+  // STEP 5: TABS CONFIGURATION
   // ============================================================================
 
   /**
-   * การกำหนดค่า tabs สำหรับ Settings Dialog
+   * Tab configuration for Settings Dialog
    * 
    * Structure:
-   * - id: unique identifier สำหรับ tab
-   * - label: ข้อความแสดงผล
-   * - icon: component icon จาก Lucide React
+   * - id: unique identifier for tab
+   * - label: display text
+   * - icon: component icon from Lucide React
    */
   const tabs = [
-    { id: "general", label: "General", icon: Settings },                     // การตั้งค่าทั่วไป
-    { id: "notifications", label: "Notifications", icon: Bell },             // การแจ้งเตือน
-    { id: "personalization", label: "Personalization", icon: Palette },      // การปรับแต่งส่วนบุคคล
-    { id: "connectors", label: "Connectors", icon: Plug },                   // การเชื่อมต่อ
-    { id: "schedules", label: "Schedules", icon: Calendar },                 // ตารางเวลา
-    { id: "data-controls", label: "Data controls", icon: Database },         // การควบคุมข้อมูล
-    { id: "security", label: "Security", icon: Shield },                     // ความปลอดภัย
-    { id: "account", label: "Account", icon: UserCircle },                   // บัญชีผู้ใช้
+    { id: "general", label: "General", icon: Settings },                     // General settings
+    { id: "notifications", label: "Notifications", icon: Bell },             // Notifications
+    { id: "personalization", label: "Personalization", icon: Palette },      // Personalization
+    { id: "connectors", label: "Connectors", icon: Plug },                   // Connectors
+    { id: "schedules", label: "Schedules", icon: Calendar },                 // Schedules
+    { id: "data-controls", label: "Data controls", icon: Database },         // Data controls
+    { id: "security", label: "Security", icon: Shield },                     // Security
+    { id: "account", label: "Account", icon: UserCircle },                   // User account
   ]
 
   // ============================================================================
-  // STEP 6: TAB CONTENT RENDERER - ฟังก์ชันแสดงเนื้อหา Tab
+  // STEP 6: TAB CONTENT RENDERER
   // ============================================================================
 
   /**
-   * ฟังก์ชันสำหรับแสดงเนื้อหาของ tab ที่เลือก
+   * Function to render the content of the selected tab
    * 
    * Purpose:
-   * - แสดง component ที่เหมาะสมตาม active tab
-   * - จัดการ routing ภายใน settings dialog
+   * - Render the appropriate component based on the active tab
+   * - Manage routing within the settings dialog
    * 
-   * @returns JSX Element ของ tab content
+   * @returns JSX Element of the tab content
    */
   const renderTabContent = () => {
     switch (activeTab) {
       case "general":
-        return <GeneralTab />                                                // แสดง General settings
+        return <GeneralTab />                                                // Render General settings
       case "notifications":
-        return <NotificationsTab />                                          // แสดง Notifications settings
+        return <NotificationsTab />                                          // Render Notifications settings
       case "personalization":
-        return <PersonalizationTab />                                        // แสดง Personalization settings
+        return <PersonalizationTab />                                        // Render Personalization settings
       case "connectors":
-        return <ConnectorsTab />                                             // แสดง Connectors settings
+        return <ConnectorsTab />                                             // Render Connectors settings
       case "schedules":
-        return <SchedulesTab />                                              // แสดง Schedules settings
+        return <SchedulesTab />                                              // Render Schedules settings
       case "data-controls":
-        return <DataControlsTab />                                           // แสดง Data controls settings
+        return <DataControlsTab />                                           // Render Data controls settings
       case "security":
-        return <SecurityTab />                                               // แสดง Security settings
+        return <SecurityTab />                                               // Render Security settings
       case "account":
-        return <AccountTab />                                                // แสดง Account settings
+        return <AccountTab />                                                // Render Account settings
       default:
-        return <GeneralTab />                                                // แสดง General เป็นค่าเริ่มต้น
+        return <GeneralTab />                                                // Render General settings as default
     }
   }
 
   // ============================================================================
-  // STEP 7: DIALOG CONTENT STRUCTURE - โครงสร้างเนื้อหา Dialog
+  // STEP 7: DIALOG CONTENT STRUCTURE
   // ============================================================================
 
   /**
-   * โครงสร้างเนื้อหาของ Settings Dialog
+   * Structure of the Settings Dialog content
    * 
    * Structure:
-   * 1. Backdrop - พื้นหลังสำหรับปิด dialog
-   * 2. Dialog Container - container หลักของ dialog
+   * 1. Backdrop - background to close the dialog
+   * 2. Dialog Container - main container
    * 3. Mobile/Desktop Tab Navigation
    * 4. Main Content Area
    * 
    * Features:
    * - Responsive layout (mobile/desktop)
    * - Portal rendering
-   * - Backdrop click เพื่อปิด
+   * - Backdrop click to close
    * - Keyboard navigation
    */
   const dialogContent = (
     <>
       {/* ============================================================================ */}
-      {/* BACKDROP - พื้นหลังสำหรับปิด Dialog */}
+      {/* BACKDROP */}
       {/* ============================================================================ */}
       
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 z-50"                          
-        onClick={onClose}                                                    // คลิก backdrop เพื่อปิด dialog
+        onClick={onClose}                                                    // Click backdrop to close dialog
       />
       
       {/* ============================================================================ */}
-      {/* DIALOG CONTAINER - Container หลักของ Dialog */}
+      {/* DIALOG CONTAINER */}
       {/* ============================================================================ */}
       
       {/* Dialog */}
@@ -361,32 +361,32 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           <div className="flex h-full min-h-0 flex-col sm:flex-row mobile-dialog-layout">
             
             {/* ============================================================================ */}
-            {/* MOBILE TAB NAVIGATION - แถบ Tab สำหรับ Mobile */}
+            {/* MOBILE TAB NAVIGATION */}
             {/* ============================================================================ */}
             
             {/* Mobile Tab Navigation */}
             <div 
-              ref={tabsContainerRef}                                         // ref สำหรับ scroll handling
+              ref={tabsContainerRef}                                         // ref for scroll handling
               className="flex sm:hidden mobile-tabs-scroll bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-2 py-2"
             >
               <div className="flex gap-1" style={{ minWidth: 'max-content' }}>
                 {tabs.map((tab) => {
-                  const IconComponent = tab.icon                             // ดึง icon component
+                  const IconComponent = tab.icon                             // Get icon component
                   return (
                     <button
                       key={tab.id}
-                      data-tab-id={tab.id}                                  // attribute สำหรับ scroll targeting
-                      onClick={() => handleTabClick(tab.id)}               // เรียกฟังก์ชันเลือก tab
+                      data-tab-id={tab.id}                                  // attribute for scroll targeting
+                      onClick={() => handleTabClick(tab.id)}               // call tab selection function
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-xs whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
                         activeTab === tab.id
-                          ? 'bg-gray-400 dark:bg-gray-700 text-white font-medium'  // style สำหรับ active tab
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'  // style สำหรับ inactive tab
+                          ? 'bg-gray-400 dark:bg-gray-700 text-white font-medium'  // style for active tab
+                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'  // style for inactive tab
                       }`}
                       role="tab"                                             // accessibility role
                       tabIndex={0}                                           // keyboard navigation
                     >
-                      <IconComponent className="h-3 w-3" />                 {/* แสดง icon */}
-                      {tab.label}                                            {/* แสดงข้อความ */}
+                      <IconComponent className="h-3 w-3" />                 {/* Show icon */}
+                      {tab.label}                                            {/* Show text */}
                     </button>
                   )
                 })}
@@ -394,26 +394,26 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             </div>
             
             {/* ============================================================================ */}
-            {/* DESKTOP SIDEBAR - แถบด้านข้างสำหรับ Desktop */}
+            {/* DESKTOP SIDEBAR */}
             {/* ============================================================================ */}
             
             {/* Desktop Sidebar */}
             <div className="hidden sm:block w-64 bg-gray-50 dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700">
               <div className="space-y-1">
                 {tabs.map((tab) => {
-                  const IconComponent = tab.icon                             // ดึง icon component
+                  const IconComponent = tab.icon                             // Get icon component
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}                   // เลือก tab (desktop ไม่ต้องใช้ scroll)
+                      onClick={() => setActiveTab(tab.id)}                   // Select tab (no scroll needed for desktop)
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${
                         activeTab === tab.id
-                          ? 'bg-gray-400 dark:bg-gray-700 text-white font-medium'  // style สำหรับ active tab
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'  // style สำหรับ inactive tab
+                          ? 'bg-gray-400 dark:bg-gray-700 text-white font-medium'  // style for active tab
+                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'  // style for inactive tab
                       }`}
                     >
-                      <IconComponent className="h-4 w-4" />                 {/* แสดง icon */}
-                      {tab.label}                                            {/* แสดงข้อความ */}
+                      <IconComponent className="h-4 w-4" />                 {/* Show icon */}
+                      {tab.label}                                            {/* Show text */}
                     </button>
                   )
                 })}
@@ -421,26 +421,26 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             </div>
             
             {/* ============================================================================ */}
-            {/* MAIN CONTENT AREA - พื้นที่เนื้อหาหลัก */}
+            {/* MAIN CONTENT AREA */}
             {/* ============================================================================ */}
             
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden sm:overflow-visible">
               
               {/* ============================================================================ */}
-              {/* HEADER - ส่วนหัวของ Content Area */}
+              {/* HEADER */}
               {/* ============================================================================ */}
               
               {/* Header */}
               <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                {/* Title - แสดงชื่อ tab ปัจจุบัน */}
+                {/* Title - Show current tab name */}
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white capitalize">
-                  {tabs.find(tab => tab.id === activeTab)?.label || "General"}  {/* หาชื่อ tab จาก ID */}
+                  {tabs.find(tab => tab.id === activeTab)?.label || "General"}  {/* Find tab name by ID */}
                 </h2>
                 
-                {/* Close Button - ปุ่มปิด dialog */}
+                {/* Close Button */}
                 <button 
-                  onClick={onClose}                                          // ปิด dialog
+                  onClick={onClose}                                          // Close dialog
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -448,13 +448,13 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               </div>
               
               {/* ============================================================================ */}
-              {/* SETTINGS CONTENT - เนื้อหา Settings */}
+              {/* SETTINGS CONTENT */}
               {/* ============================================================================ */}
               
               {/* Settings Content */}
               <div className="flex-1 mobile-content-area sm:dialog-content-scroll sm:overflow-y-auto">
                 <div className="p-4 sm:p-6">
-                  {renderTabContent()}                                      {/* แสดงเนื้อหาตาม active tab */}
+                  {renderTabContent()}                                      {/* Render content based on active tab */}
                 </div>
               </div>
             </div>
@@ -465,37 +465,37 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   )
 
   // ============================================================================
-  // STEP 8: PORTAL RENDERING - การแสดงผลผ่าน Portal
+  // STEP 8: PORTAL RENDERING
   // ============================================================================
 
   /**
-   * แสดงผล dialog ผ่าน createPortal
+   * Render dialog using createPortal
    * 
    * Purpose:
-   * - แสดง dialog นอก DOM tree ของ component
-   * - ป้องกัน z-index และ overflow issues
-   * - รองรับ SSR โดยตรวจสอบ mounted state
+   * - Render dialog outside the component's DOM tree
+   * - Prevent z-index and overflow issues
+   * - Support SSR by checking mounted state
    * 
    * Conditions:
-   * - แสดงเฉพาะเมื่อ mounted = true
-   * - ใช้ document.body เป็น target
+   * - Show only when mounted = true
+   * - Use document.body as target
    */
   return mounted ? createPortal(dialogContent, document.body) : null
 }
 
 // ============================================================================
-// MAIN CHAT SIDEBAR COMPONENT - Component หลักของ Chat Sidebar
+// MAIN CHAT SIDEBAR COMPONENT
 // ============================================================================
 
 /**
- * ChatSidebar Component: แถบด้านข้างสำหรับการนำทางและจัดการประวัติการสนทนา
+ * ChatSidebar Component: Sidebar for navigation and chat history management
  * 
  * Purpose:
- * - แสดงรายการประวัติการสนทนาจัดกลุ่มตามวันที่
- * - สร้างการสนทนาใหม่
- * - ลบประวัติการสนทนา
- * - จัดการ user profile และ settings
- * - รองรับ responsive design
+ * - Display chat history grouped by date
+ * - Create new conversations
+ * - Delete conversation history
+ * - Manage user profile and settings
+ * - Support responsive design
  * 
  * Features:
  * - Collapsible sidebar
@@ -505,233 +505,228 @@ function SettingsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
  * - User profile popover
  * - Theme toggle
  * 
- * @param display_name - ชื่อแสดงผลของผู้ใช้
- * @param email - อีเมลของผู้ใช้
- * @param userId - ID ของผู้ใช้สำหรับ authentication
+ * @param display_name - User's display name
+ * @param email - User's email
+ * @param userId - User ID for authentication
  * @returns JSX Element
  */
 export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
   
   // ============================================================================
-  // STEP 1: HOOKS AND STATE DECLARATIONS - การประกาศ Hooks และ State
+  // STEP 1: HOOKS AND STATE DECLARATIONS
   // ============================================================================
   
   /**
-   * React และ Next.js Hooks
+   * React and Next.js Hooks
    * 
    * Variables:
-   * - state: สถานะของ sidebar (collapsed/expanded)
-   * - pathname: path ปัจจุบันของ URL
-   * - router: router object สำหรับ navigation
-   * - resetChat: ฟังก์ชันรีเซ็ต chat state จาก context
+   * - state: status of the sidebar (collapsed/expanded)
+   * - pathname: current URL path
+   * - router: router object for navigation
+   * - resetChat: function to reset chat state from context
    */
-  const { state } = useSidebar()                                             // สถานะของ sidebar จาก UI component
-  const pathname = usePathname()                                             // path ปัจจุบันของ URL
-  const router = useRouter()                                                 // router สำหรับการนำทาง
-  const { resetChat } = useChatContext()                                     // ฟังก์ชันรีเซ็ต chat จาก context
+  const { state } = useSidebar()                                             // sidebar state from UI component
+  const pathname = usePathname()                                             // current URL path
+  const router = useRouter()                                                 // router for navigation
+  const { resetChat } = useChatContext()                                     // reset chat function from context
   
   /**
    * Local State Variables
    * 
    * Variables:
-   * - isSettingsOpen: สถานะการเปิด/ปิด settings dialog
-   * - deleteDialogOpen: สถานะการเปิด/ปิด delete confirmation dialog
-   * - sessionToDelete: ID ของ session ที่จะลบ
+   * - isSettingsOpen: status of settings dialog (open/closed)
+   * - deleteDialogOpen: status of delete confirmation dialog (open/closed)
+   * - sessionToDelete: ID of session to be deleted
    */
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)               // สถานะการเปิด/ปิด settings dialog
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)           // สถานะการเปิด/ปิด delete confirmation dialog
-  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null) // ID ของ session ที่จะลบ
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)               // status of settings dialog (open/closed)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)           // status of delete confirmation dialog
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null) // ID of session to be deleted
   
   /**
-   * Custom Hook สำหรับจัดการ Chat Sessions
+   * Custom Hook for managing Chat Sessions
    * 
    * Returns:
-   * - sessions: array ของ chat sessions
-   * - loading: สถานะการโหลดข้อมูล
-   * - fetchSessions: ฟังก์ชันดึงข้อมูล sessions
-   * - deleteSession: ฟังก์ชันลบ session
+   * - sessions: array of chat sessions
+   * - loading: loading status
+   * - fetchSessions: function to fetch sessions
+   * - deleteSession: function to delete a session
    */
   const { sessions, loading, fetchSessions, deleteSession } = useChatSessions(userId)
   
   /**
-   * จัดกลุ่ม sessions ตามวันที่
+   * Group sessions by date
    * 
    * Purpose:
-   * - จัดระเบียบการแสดงผลให้ดูง่าย
-   * - กลุ่มตามช่วงเวลา (Today, Yesterday, Last 7 days, etc.)
+   * - Organize display for better readability
+   * - Group by periods (Today, Yesterday, Last 7 days, etc.)
    */
-  const groupedSessions = groupSessionsByDate(sessions)                      // จัดกลุ่ม sessions ตามวันที่
+  const groupedSessions = groupSessionsByDate(sessions)                      // group sessions by date
 
   // ============================================================================
-  // STEP 2: EFFECTS - การจัดการ Side Effects
+  // STEP 2: EFFECTS
   // ============================================================================
 
   /**
-   * Effect สำหรับดึงข้อมูล sessions เมื่อ component mount หรือ userId เปลี่ยน
+   * Effect to fetch sessions on component mount or when userId changes
    * 
    * Purpose:
-   * - โหลดรายการ chat sessions ของผู้ใช้
-   * - รีเฟรชข้อมูลเมื่อมีการเปลี่ยน userId
-   * - ป้องกันการเรียก API เมื่อไม่มี userId
+   * - Load user's chat sessions
+   * - Refresh data when userId changes
+   * - Prevent API call when there is no userId
    * 
    * Dependencies: [userId]
-   * Note: ปิด eslint rule เพราะ fetchSessions มาจาก hook และไม่จำเป็นต้องใส่ใน dependency
+   * Note: Disabled eslint rule because fetchSessions comes from a hook and doesn't need to be in the dependency array
    */
   useEffect(() => {
     if (userId) {
-      fetchSessions()                                                        // ดึงข้อมูล sessions เฉพาะเมื่อมี userId
+      fetchSessions()                                                        // Fetch sessions only if userId exists
     }
   }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ============================================================================
-  // STEP 3: EVENT HANDLER FUNCTIONS - ฟังก์ชันจัดการ Events
+  // STEP 3: EVENT HANDLER FUNCTIONS
   // ============================================================================
 
   /**
-   * ฟังก์ชันสำหรับจัดการปุ่ม New Chat
+   * Function to handle the New Chat button
    * 
    * Purpose:
-   * - รีเซ็ต chat state เพื่อเริ่มการสนทนาใหม่
-   * - เคลียร์ sessionId จาก localStorage
-   * - นำทางไปหน้า welcome screen
-   * - จัดการ error handling
+   * - Reset chat state to start a new conversation
+   * - Clear sessionId from localStorage
+   * - Navigate to welcome screen
+   * - Handle errors
    * 
    * Process:
-   * 1. ตรวจสอบ userId
-   * 2. รีเซ็ต chat state
-   * 3. เคลียร์ localStorage
-   * 4. นำทางไปหน้า chat
+   * 1. Check userId
+   * 2. Reset chat state
+   * 3. Clear localStorage
+   * 4. Navigate to chat page
    */
   const handleNewChat = async () => {
-    if (!userId) return                                                      // ป้องกันการทำงานเมื่อไม่มี userId
+    if (!userId) return                                                      // prevent execution if no userId
     
     try {
-      // รีเซ็ต chat state
-      resetChat()                                                            // เรียกฟังก์ชันรีเซ็ตจาก context
+      // Reset chat state
+      resetChat()                                                            // call reset function from context
       
-      // เคลียร์ sessionId จาก localStorage
-      localStorage.removeItem('currentSessionId')                           // ลบ session ID ที่เก็บไว้
+      // Clear sessionId from localStorage
+      localStorage.removeItem('currentSessionId')                           // remove stored session ID
       
-      // ไปหน้า New Chat (Welcome screen) โดยไม่สร้าง session ใหม่ทันที
-      router.push("/chat")                                                   // นำทางไปหน้า chat
+      // Go to New Chat (Welcome screen) without creating a new session immediately
+      router.push("/chat")                                                   // navigate to chat page
       
     } catch (error) {
       console.error('Error navigating to new chat:', error)
-      // ถ้ามีข้อผิดพลาด ไปหน้า chat ปกติ
+      // If error occurs, go to the default chat page
       router.push("/chat")                                                   // fallback navigation
     }
   }
 
   /**
-   * ฟังก์ชันสำหรับจัดการการลบ Session
+   * Function to handle session deletion
    * 
    * Purpose:
-   * - เปิด confirmation dialog สำหรับการลบ
-   * - ป้องกัน navigation เมื่อคลิกปุ่มลบ
-   * - ตั้งค่า session ที่จะลบ
+   * - Open confirmation dialog for deletion
+   * - Prevent navigation when delete button is clicked
+   * - Set the session to be deleted
    * 
    * Process:
-   * 1. ป้องกัน event propagation
-   * 2. ตรวจสอบ userId
-   * 3. เก็บ sessionId ที่จะลบ
-   * 4. เปิด confirmation dialog
+   * 1. Prevent event propagation
+   * 2. Check userId
+   * 3. Store the ID of the session to be deleted
+   * 4. Open confirmation dialog
    * 
-   * @param sessionId - ID ของ session ที่จะลบ
+   * @param sessionId - ID of the session to delete
    * @param e - React Mouse Event
    */
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
-    e.preventDefault()                                                       // ป้องกันการนำทางไป Link
-    e.stopPropagation()                                                      // ป้องกัน event bubbling
+    e.preventDefault()                                                       // prevent navigation to Link
+    e.stopPropagation()                                                      // prevent event bubbling
     
-    if (!userId) return                                                      // ป้องกันการทำงานเมื่อไม่มี userId
+    if (!userId) return                                                      // prevent execution if no userId
     
-    // เปิด Alert Dialog
-    setSessionToDelete(sessionId)                                            // เก็บ ID ของ session ที่จะลบ
-    setDeleteDialogOpen(true)                                                // เปิด confirmation dialog
+    // Open Alert Dialog
+    setSessionToDelete(sessionId)                                            // Store ID of session to be deleted
+    setDeleteDialogOpen(true)                                                // open confirmation dialog
   }
 
   /**
-   * ฟังก์ชันสำหรับยืนยันการลบ Session
+   * Function to confirm session deletion
    * 
    * Purpose:
-   * - ลบ session จาก database
-   * - จัดการการนำทางถ้าลบ session ปัจจุบัน
-   * - รีเฟรชรายการ sessions
-   * - ปิด dialog และเคลียร์ state
+   * - Delete session from database
+   * - Handle navigation if the current session is deleted
+   * - Refresh sessions list
+   * - Close dialog and clear state
    * 
    * Process:
-   * 1. ตรวจสอบ sessionToDelete
-   * 2. เรียก API ลบ session
-   * 3. ตรวจสอบว่าเป็น session ปัจจุบันหรือไม่
-   * 4. นำทางและรีเฟรชข้อมูล
-   * 5. ปิด dialog
+   * 1. Check sessionToDelete
+   * 2. Call API to delete session
+   * 3. Check if it's the current session
+   * 4. Navigate and refresh data
+   * 5. Close dialog
    */
   const confirmDeleteSession = async () => {
-    if (!sessionToDelete) return                                             // ป้องกันการทำงานเมื่อไม่มี sessionToDelete
+    if (!sessionToDelete) return                                             // prevent execution if no sessionToDelete
     
     try {
-      const success = await deleteSession(sessionToDelete)                   // เรียก API ลบ session
+      const success = await deleteSession(sessionToDelete)                   // call API to delete session
       if (success) {
-        // ถ้าเป็น session ปัจจุบันที่ถูกลบ ให้ไปหน้า new chat
+        // If the current session was deleted, navigate to new chat
         if (pathname === `/chat/${sessionToDelete}`) {
-          resetChat()                                                        // รีเซ็ต chat state
-          localStorage.removeItem('currentSessionId')                       // ลบจาก localStorage
-          router.push("/chat")                                               // นำทางไปหน้า chat ใหม่
+          resetChat()                                                        // reset chat state
+          localStorage.removeItem('currentSessionId')                       // remove from localStorage
+          router.push("/chat")                                               // navigate to new chat page
         }
-        // รีเฟรช sessions list
-        fetchSessions()                                                      // โหลดรายการ sessions ใหม่
+        // Refresh sessions list
+        fetchSessions()                                                      // Load updated sessions list
       }
     } catch (error) {
-      console.error('Error deleting session:', error)                       // แสดง error ใน console
+      console.error('Error deleting session:', error)                       // Show error in console
     } finally {
-      // ปิด dialog และเคลียร์ state
-      setDeleteDialogOpen(false)                                             // ปิด confirmation dialog
-      setSessionToDelete(null)                                               // เคลียร์ session ที่จะลบ
+      // Close dialog and clear state
+      setDeleteDialogOpen(false)                                             // Close confirmation dialog
+      setSessionToDelete(null)                                               // Clear session to be deleted
     }
   }
 
   // ============================================================================
-  // STEP 4: MAIN RENDER - การแสดงผลหลัก
+  // STEP 4: MAIN RENDER
   // ============================================================================
 
   /**
-   * Main render section - ส่วนแสดงผลหลักของ ChatSidebar
+   * Main render section of ChatSidebar
    * 
    * Structure:
-   * 1. Sidebar Header - ส่วนหัวพร้อม logo และ controls
-   * 2. Sidebar Content - เนื้อหาหลักและรายการ sessions
-   * 3. Sidebar Footer - ส่วนท้ายพร้อม user profile
-   * 4. Dialogs - Settings dialog และ delete confirmation
+   * 1. Sidebar Header - Header with logo and controls
+   * 2. Sidebar Content - Main content and sessions list
+   * 3. Sidebar Footer - Footer with user profile
+   * 4. Dialogs - Settings dialog and delete confirmation
    */
   return (
-    <Sidebar collapsible="icon">                                            {/* Sidebar component ที่ collapsible ได้ */}
+    <Sidebar collapsible="icon">                                            {/* Collapsible Sidebar component */}
       
       {/* ============================================================================ */}
-      {/* SIDEBAR HEADER - ส่วนหัวของ Sidebar */}
+      {/* SIDEBAR HEADER */}
       {/* ============================================================================ */}
       
-      <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-2 py-4">
+      <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-2 py-3 border-b border-sky-100/70 dark:border-slate-800">
         
-        {/* Logo และ App Name */}
+        {/* Logo and App Name */}
         <div className="flex flex-row items-center gap-2 px-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
-          {/* AI Logo */}
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">AI</span>
-          </div>
-          
-          {/* App Name - ซ่อนเมื่อ sidebar collapsed */}
-          <div className="text-md font-bold text-slate-900 dark:text-white tracking-tight group-data-[collapsible=icon]:hidden">
-            Genius AI
+          {/* BKK AI Logo */}
+          <div className="h-8 px-3 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-sm shadow-sky-200 dark:shadow-sky-900/30 whitespace-nowrap">
+            <span className="text-white font-bold text-xs">BKK AI</span>
           </div>
         </div>
         
-        {/* Control Buttons - ซ่อนเมื่อ sidebar collapsed */}
+        {/* Control Buttons - Hidden when sidebar is collapsed */}
         <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
 
-          {/* Theme Toggle Button - ปุ่มสลับธีม */}
+          {/* Theme Toggle Button */}
           <ThemeToggle />
 
-          {/* Search Button - ปุ่มค้นหา */}
+          {/* Search Button */}
           <Button
             variant="ghost"
             className="size-8"
@@ -742,21 +737,21 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       </SidebarHeader>
 
       {/* ============================================================================ */}
-      {/* SIDEBAR CONTENT - เนื้อหาหลักของ Sidebar */}
+      {/* SIDEBAR CONTENT */}
       {/* ============================================================================ */}
       
       <SidebarContent className="pt-4">
         
         {/* ============================================================================ */}
-        {/* NEW CHAT BUTTON - ปุ่มสร้างการสนทนาใหม่ */}
+        {/* NEW CHAT BUTTON */}
         {/* ============================================================================ */}
         
-        <div className="px-4 group-data-[collapsible=icon]:px-2">
+        <div className="px-3 group-data-[collapsible=icon]:px-2">
           <Button
             variant="outline"
-            className="mb-4 flex w-full items-center gap-2 group-data-[collapsible=icon]:size-8 cursor-pointer group-data-[collapsible=icon]:p-0"
-            title={state === "collapsed" ? "New Chat" : undefined}          // tooltip เมื่อ collapsed
-            onClick={handleNewChat}                                          // เรียกฟังก์ชันสร้าง chat ใหม่
+            className="mb-3 flex w-full items-center gap-2 group-data-[collapsible=icon]:size-8 cursor-pointer group-data-[collapsible=icon]:p-0 border-sky-200 hover:bg-sky-50 hover:border-sky-300 text-slate-600 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 rounded-xl text-sm"
+            title={state === "collapsed" ? "New Chat" : undefined}
+            onClick={handleNewChat}
           >
             <PlusIcon className="size-4" />
             <span className="group-data-[collapsible=icon]:hidden cursor-pointer">
@@ -766,7 +761,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         </div>
 
         {/* ============================================================================ */}
-        {/* LOADING STATE - สถานะการโหลด */}
+        {/* LOADING STATE */}
         {/* ============================================================================ */}
         
         {/* Loading state */}
@@ -777,16 +772,16 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         )}
 
         {/* ============================================================================ */}
-        {/* CHAT SESSIONS LIST - รายการประวัติการสนทนา */}
+        {/* CHAT SESSIONS LIST */}
         {/* ============================================================================ */}
         
         {/* Chat sessions grouped by date */}
         {!loading && groupedSessions.map((group) => (
           <SidebarGroup
-            key={group.period}                                              // unique key สำหรับ group
-            className="group-data-[collapsible=icon]:hidden"               // ซ่อนเมื่อ collapsed
+            key={group.period}                                              // unique key for group
+            className="group-data-[collapsible=icon]:hidden"               // hide when collapsed
           >
-            <SidebarGroupLabel>{group.period}</SidebarGroupLabel>           {/* แสดงชื่อกลุ่ม เช่น "Today", "Yesterday" */}
+            <SidebarGroupLabel>{group.period}</SidebarGroupLabel>           {/* Display group name e.g., "Today", "Yesterday" */}
             <SidebarMenu>
               {group.sessions.map((session) => (
                 <div key={session.id} className="relative group/item">
@@ -805,11 +800,11 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
                     </SidebarMenuButton>
                   </Link>
                   
-                  {/* Delete Button - ปุ่มลบ session */}
+                  {/* Delete Button */}
                   <button
                     onClick={(e) => handleDeleteSession(session.id, e)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-opacity duration-200 p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-500 hover:text-red-700 dark:hover:text-red-400"
-                    title="ลบประวัติการแชท"
+                    title="Delete Chat History"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -820,7 +815,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
         ))}
 
         {/* ============================================================================ */}
-        {/* EMPTY STATE - สถานะเมื่อไม่มีข้อมูล */}
+        {/* EMPTY STATE */}
         {/* ============================================================================ */}
         
         {/* Empty state */}
@@ -835,41 +830,38 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       </SidebarContent>
 
       {/* ============================================================================ */}
-      {/* SIDEBAR FOOTER - ส่วนท้ายพร้อม User Profile */}
+      {/* SIDEBAR FOOTER */}
       {/* ============================================================================ */}
       
       {/* User Profile Footer */}
-      <SidebarFooter className="p-4 border-t border-slate-200 dark:border-slate-700 group-data-[collapsible=icon]:p-2">
+      <SidebarFooter className="p-3 border-t border-sky-100/70 dark:border-slate-800 group-data-[collapsible=icon]:p-2">
         <Popover>
           <PopoverTrigger asChild>
-            
             {/* User Profile Button */}
-            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1data-[state=open]:bg-slate-100 dark:data-[state=open]:bg-slate-800">
-              
+            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-sky-50 dark:hover:bg-slate-800 transition-colors cursor-pointer group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-1">
               {/* User Avatar */}
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shrink-0 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 shadow-sm">
                 <span className="text-white font-semibold text-sm group-data-[collapsible=icon]:text-xs">
-                  {/* แสดงตัวอักษรแรกของ display_name หรือ email */}
                   {display_name
                     ? display_name.charAt(0).toUpperCase()
                     : email.charAt(0).toUpperCase()}
                 </span>
               </div>
               
-              {/* User Info - ซ่อนเมื่อ collapsed */}
+              {/* User Info */}
               <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                  {display_name || email.split("@")[0]}                     {/* แสดง display_name หรือ username */}
+                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+                  {display_name || email.split("@")[0]}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {email}                                                    {/* แสดงอีเมล */}
+                <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                  {email}
                 </p>
               </div>
             </div>
           </PopoverTrigger>
           
           {/* ============================================================================ */}
-          {/* USER PROFILE POPOVER - เมนูผู้ใช้ */}
+          {/* USER PROFILE POPOVER */}
           {/* ============================================================================ */}
           
           <PopoverContent side="top" align="start" className="w-80 p-0">
@@ -922,7 +914,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 h-10 text-left px-3"
-                  onClick={() => setIsSettingsOpen(true)}                    // เปิด settings dialog
+                  onClick={() => setIsSettingsOpen(true)}                    // Open settings dialog
                 >
                   <Settings className="h-4 w-4" />
                   Settings
@@ -932,7 +924,7 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
 
                 {/* Logout Button */}
                 <div className="px-1">
-                  <LogoutButton />                                            {/* Component สำหรับ logout */}
+                  <LogoutButton />                                            {/* Logout component */}
                 </div>
               </div>
             </div>
@@ -941,39 +933,39 @@ export function ChatSidebar({ display_name, email, userId }: ChatSidebarProps) {
       </SidebarFooter>
 
       {/* ============================================================================ */}
-      {/* DIALOGS - Settings Dialog และ Delete Confirmation */}
+      {/* DIALOGS */}
       {/* ============================================================================ */}
       
       {/* Settings Dialog */}
       <SettingsDialog 
-        isOpen={isSettingsOpen}                                             // สถานะการเปิด/ปิด
-        onClose={() => setIsSettingsOpen(false)}                           // callback สำหรับปิด dialog
+        isOpen={isSettingsOpen}                                             // open/close status
+        onClose={() => setIsSettingsOpen(false)}                           // callback to close dialog
       />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>ลบประวัติการแชท</AlertDialogTitle>
+            <AlertDialogTitle>Delete Chat History</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการแชทนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              Are you sure you want to delete this chat history? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             {/* Cancel Button */}
             <AlertDialogCancel onClick={() => {
-              setDeleteDialogOpen(false)                                     // ปิด dialog
-              setSessionToDelete(null)                                       // เคลียร์ session ที่จะลบ
+              setDeleteDialogOpen(false)                                     // close dialog
+              setSessionToDelete(null)                                       // clear session to delete
             }}>
-              ยกเลิก
+              Cancel
             </AlertDialogCancel>
             
             {/* Confirm Delete Button */}
             <AlertDialogAction 
-              onClick={confirmDeleteSession}                                 // เรียกฟังก์ชันยืนยันการลบ
+              onClick={confirmDeleteSession}                                 // call delete confirmation function
               className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
             >
-              ลบ
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

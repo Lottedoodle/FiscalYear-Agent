@@ -62,41 +62,49 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+      <Card className="border-sky-100 shadow-lg shadow-sky-100/30 dark:border-slate-800 dark:shadow-none">
+        <CardHeader className="pb-4">
+          {/* Logo mark */}
+          <div className="flex justify-center mb-4">
+            <div className="h-12 px-5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-md shadow-sky-200 dark:shadow-sky-900/40 whitespace-nowrap">
+              <span className="text-white font-bold text-lg">BKK AI</span>
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-center text-slate-800 dark:text-white">Sign Up</CardTitle>
+          <CardDescription className="text-center text-slate-400 dark:text-slate-500">Create a new account to get started</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
 
-              <div className="grid gap-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                      id="displayName"
-                      type="text"
-                      placeholder="Display Name"
-                      required
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                  />
+              <div className="grid gap-1.5">
+                <Label htmlFor="displayName" className="text-slate-600 dark:text-slate-300 text-sm font-medium">Display Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="ชื่อที่ใช้แสดง"
+                  required
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="border-sky-200 dark:border-slate-700 focus:border-sky-400 focus:ring-sky-200 dark:bg-slate-800 rounded-lg"
+                />
               </div>
 
-              <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                      id="phone"
-                      type="text"
-                      placeholder="Phone"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                  />
+              <div className="grid gap-1.5">
+                <Label htmlFor="phone" className="text-slate-600 dark:text-slate-300 text-sm font-medium">Phone</Label>
+                <Input
+                  id="phone"
+                  type="text"
+                  placeholder="เบอร์โทรศัพท์"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="border-sky-200 dark:border-slate-700 focus:border-sky-400 focus:ring-sky-200 dark:bg-slate-800 rounded-lg"
+                />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="email" className="text-slate-600 dark:text-slate-300 text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -104,40 +112,56 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="border-sky-200 dark:border-slate-700 focus:border-sky-400 focus:ring-sky-200 dark:bg-slate-800 rounded-lg"
                 />
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="password" className="text-slate-600 dark:text-slate-300 text-sm font-medium">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="border-sky-200 dark:border-slate-700 focus:border-sky-400 focus:ring-sky-200 dark:bg-slate-800 rounded-lg"
                 />
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="repeat-password" className="text-slate-600 dark:text-slate-300 text-sm font-medium">Repeat Password</Label>
                 <Input
                   id="repeat-password"
                   type="password"
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
+                  className="border-sky-200 dark:border-slate-700 focus:border-sky-400 focus:ring-sky-200 dark:bg-slate-800 rounded-lg"
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating an account...' : 'Sign up'}
+
+              {error && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-lg font-semibold py-2.5 shadow-md shadow-sky-200 dark:shadow-sky-900/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg mt-1"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    Creating account...
+                  </span>
+                ) : 'Sign Up'}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-5 text-center text-sm text-slate-400">
               Already have an account?{' '}
-              <Link href="/auth/login" className="underline underline-offset-4">
+              <Link href="/auth/login" className="text-sky-500 hover:text-sky-700 dark:text-sky-400 font-medium underline-offset-4 hover:underline transition-colors">
                 Login
               </Link>
             </div>

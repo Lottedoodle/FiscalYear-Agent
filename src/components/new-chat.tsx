@@ -1,49 +1,49 @@
 /**
  * ===============================================
- * New Chat Component - หน้าสำหรับสนทนาใหม่
+ * New Chat Component - New conversation page
  * ===============================================
  * 
- * Purpose: หน้าหลักสำหรับเริ่มการสนทนาใหม่และจัดการประวัติการสนทนา
+ * Purpose: Main page for starting new conversations and managing chat history
  * 
  * Features:
- * - แสดงหน้า Welcome สำหรับการสนทนาใหม่
- * - โหลดประวัติการสนทนาจาก session ID
- * - ส่งข้อความไปยัง AI และรับการตอบกลับ
- * - จัดการ authentication และ session
- * - รองรับการสร้าง chat session ใหม่
- * - แสดงสถานะการโหลดและการพิมพ์
+ * - Display Welcome screen for new conversations
+ * - Load chat history from session ID
+ * - Send messages to AI and receive responses
+ * - Manage authentication and session
+ * - Support creating new chat sessions
+ * - Show loading and typing status
  * 
- * Authentication: ใช้ Supabase Authentication
- * State Management: ใช้ React Context และ Local State
- * Chat Transport: ใช้ AI SDK สำหรับจัดการ streaming
+ * Authentication: Uses Supabase Authentication
+ * State Management: Uses React Context and Local State
+ * Chat Transport: Uses AI SDK for streaming management
  */
 
 "use client"
 
 // ============================================================================
-// IMPORTS - การนำเข้า Components และ Libraries ที่จำเป็น
+// IMPORTS - Importing necessary components and libraries
 // ============================================================================
 import {
   ChatContainerContent,
   ChatContainerRoot,
-} from "@/components/ui/chat-container"                                      // Container สำหรับแสดงข้อความ chat
+} from "@/components/ui/chat-container"                                      // Container for displaying chat messages
 import {
   Message,
   MessageAction,
   MessageActions,
   MessageContent,
-} from "@/components/ui/message"                                             // Components สำหรับแสดงข้อความ
+} from "@/components/ui/message"                                             // Components for displaying messages
 import {
   PromptInput,
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
-} from "@/components/ui/prompt-input"                                       // Components สำหรับรับ input จากผู้ใช้
-import { ScrollButton } from "@/components/ui/scroll-button"                // ปุ่มสำหรับ scroll ไปข้างล่าง
-import { Button } from "@/components/ui/button"                             // Component ปุ่มพื้นฐาน
-import { SidebarTrigger } from "@/components/ui/sidebar"                    // ปุ่มสำหรับเปิด/ปิด sidebar
-import { ModelSelector } from "@/components/model-selector"                 // Dropdown สำหรับเลือกโมเดล AI
-import { cn } from "@/lib/utils"                                            // Utility สำหรับจัดการ CSS classes
+} from "@/components/ui/prompt-input"                                       // Components for receiving user input
+import { ScrollButton } from "@/components/ui/scroll-button"                // Button for scrolling to the bottom
+import { Button } from "@/components/ui/button"                             // Basic button component
+import { SidebarTrigger } from "@/components/ui/sidebar"                    // Button for toggling the sidebar
+import { ModelSelector } from "@/components/model-selector"                 // Dropdown for selecting AI models
+import { cn } from "@/lib/utils"                                            // Utility for managing CSS classes
 import {
   ArrowUp,
   Check,
@@ -53,27 +53,27 @@ import {
   MoreHorizontal,
   Plus,
   Square,
-} from "lucide-react"                                                        // Icons จาก Lucide React
+} from "lucide-react"                                                        // Icons from Lucide React
 import { useRef, useState, useEffect } from "react"                          // React Hooks
-import { useChatContext } from "@/contexts/chat-context"                     // Context สำหรับจัดการสถานะ chat
-import { useChat } from '@ai-sdk/react'                                      // Hook สำหรับจัดการ AI chat
-import { createCustomChatTransport } from '@/lib/custom-chat-transport';     // Custom transport สำหรับส่งข้อมูล
+import { useChatContext } from "@/contexts/chat-context"                     // Context for managing chat state
+import { useChat } from '@ai-sdk/react'                                      // Hook for managing AI chat
+import { createCustomChatTransport } from '@/lib/custom-chat-transport';     // Custom transport for data transmission
 import { createClient } from '@/lib/client'                                  // Supabase client
-import { DEFAULT_MODEL } from "@/constants/models"                           // โมเดล AI เริ่มต้น
+import { DEFAULT_MODEL } from "@/constants/models"                           // Default AI model
 import { API_BASE, buildApiUrl } from "@/constants/api"   // API endpoints constants
 
 /**
- * Interface สำหรับ Message Object
+ * Interface for Message Object
  * 
  * Structure:
- * - id: string - ID ของข้อความ
- * - role: string - บทบาท ('user' หรือ 'assistant')
- * - parts: Array - ส่วนประกอบของข้อความ
+ * - id: string - ID of the message
+ * - role: string - Role ('user' or 'assistant')
+ * - parts: Array - Message components
  */
 interface MessageType {
-  id: string;                                                                // ID ของข้อความ
-  role: string;                                                              // บทบาทของผู้ส่ง (user/assistant)
-  parts: Array<{ type: string; text: string }>;                            // เนื้อหาข้อความแบบ parts
+  id: string;                                                                // ID of the message
+  role: string;                                                              // Sender's role (user/assistant)
+  parts: Array<{ type: string; text: string }>;                            // Message content in parts format
 }
 
 // Sample Prompt Interface
@@ -86,33 +86,33 @@ interface SamplePrompt {
 // Sample Prompt Data
 const samplePrompts: SamplePrompt[] = [
     {
-      title: 'สรุปข้อมูลจากบทความ',
-      prompt: 'สามารถช่วยสรุปสาระสำคัญจากบทความที่ฉันให้มาได้ไหม?',
+      title: 'Summary of information extracted from the article',
+      prompt: 'Could you please summarize the key points from the article I have provided?',
       icon: '📋'
     },
     {
-      title: 'เขียนโค้ดให้ทำงาน',
-      prompt: 'ช่วยเขียนโค้ด Python สำหรับการอ่านไฟล์ CSV และแสดงข้อมูลเป็นกราฟ',
+      title: 'Write code to work',
+      prompt: 'Could you please write Python code to read a CSV file and display the data as a graph?',
       icon: '💻'
     },
     {
-      title: 'แปลภาษา',
-      prompt: 'ช่วยแปลข้อความนี้จากภาษาไทยเป็นภาษาอังกฤษ',
+      title: 'Translate language',
+      prompt: 'Could you please translate this text from Thai to English?',
       icon: '🌐'
     },
     {
-      title: 'วิเคราะห์ข้อมูล',
-      prompt: 'ช่วยวิเคราะห์ข้อมูลการขายของบริษัทในไตรมาสที่ผ่านมา',
+      title: 'Analyze data',
+      prompt: 'Could you please analyze the sales data of the company in the past quarter?',
       icon: '📊'
     },
     {
-      title: 'เขียนอีเมล์',
-      prompt: 'ช่วยเขียนอีเมล์สำหรับขอนัดหมายประชุมกับลูกค้า',
+      title: 'Write email',
+      prompt: 'Could you please write an email to schedule a meeting with the customer?',
       icon: '✉️'
     },
     {
-      title: 'แก้ไขข้อผิดพลาด',
-      prompt: 'โค้ดของฉันมีข้อผิดพลาด สามารถช่วยหาและแก้ไขได้ไหม?',
+      title: 'Fix errors',
+      prompt: 'My code has errors, could you please help find and fix them?',
       icon: '🐛'
     }
 ]
@@ -120,87 +120,87 @@ const samplePrompts: SamplePrompt[] = [
 export function NewChat() {
   
   // ============================================================================
-  // STEP 1: STATE DECLARATIONS - การประกาศตัวแปร State
+  // STEP 1: STATE DECLARATIONS - Declaring State Variables
   // ============================================================================
 
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)               // โมเดล AI ที่เลือก (ค่าเริ่มต้นจาก constants)
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)               // Selected AI model (default from constants)
   
   /**
-   * ข้อความที่ผู้ใช้พิมพ์ในช่อง input
-   * ใช้สำหรับเก็บข้อความที่จะส่งไปยัง AI
+   * Message text typed by the user in the input field
+   * Used to store the message to be sent to AI
    */
   const [prompt, setPrompt] = useState("")
   
   /**
-   * สถานะการแสดงหน้า Welcome และฟังก์ชันสำหรับเปลี่ยนสถานะ
-   * มาจาก ChatContext ที่ใช้ร่วมกันในทั้งแอปพลิเคชัน
+   * Welcome screen display status and function to change the status
+   * From ChatContext shared across the entire application
    */
   const { showWelcome, setShowWelcome } = useChatContext()
   
   /**
-   * Reference สำหรับ DOM elements ที่ต้องการ access โดยตรง
-   * ใช้สำหรับการ scroll และ focus
+   * Reference for DOM elements needing direct access
+   * Used for scrolling and focusing
    */
-  const chatContainerRef = useRef<HTMLDivElement>(null)                      // Container สำหรับข้อความ chat
-  const textareaRef = useRef<HTMLTextAreaElement>(null)                      // Textarea สำหรับพิมพ์ข้อความ
+  const chatContainerRef = useRef<HTMLDivElement>(null)                      // Container for chat messages
+  const textareaRef = useRef<HTMLTextAreaElement>(null)                      // Textarea for typing messages
   
   /**
-   * State สำหรับติดตาม copy status ของแต่ละข้อความ
-   * key: message id, value: boolean (true = เพิ่งกด copy)
+   * State for tracking the copy status of each message
+   * key: message id, value: boolean (true = just clicked copy)
    */
   const [copiedMessages, setCopiedMessages] = useState<Record<string, boolean>>({})
   
   /**
-   * ID ของผู้ใช้ที่ล็อกอินอยู่ในปัจจุบัน
-   * ใช้สำหรับการระบุตัวตนและบันทึกข้อมูล
+   * ID of the currently logged-in user
+   * Used for identification and data recording
    */
   const [userId, setUserId] = useState<string>('')
 
   /**
-   * ID ของ session การสนทนาปัจจุบัน
-   * ใช้สำหรับเก็บประวัติการสนทนาและความต่อเนื่อง
+   * ID of the current chat session
+   * Used for storing chat history and continuity
    */
   const [sessionId, setSessionId] = useState<string | undefined>(undefined)
   
   /**
-   * สถานะการโหลดประวัติการสนทนา
-   * แสดงข้อความ loading เมื่อกำลังดึงข้อมูลจาก database
+   * Chat history loading status
+   * Displays loading message when fetching data from the database
    */
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   
   /**
-   * ข้อความที่โหลดมาจากประวัติการสนทนาใน database
-   * เก็บข้อความที่ดึงมาจาก session เก่าเพื่อแสดงต่อจากที่เหลือ
+   * Messages loaded from conversation history in the database
+   * Stores messages retrieved from old sessions to continue display
    */
-  const [loadedMessages, setLoadedMessages] = useState<MessageType[]>([])    // เก็บข้อความที่โหลดจากประวัติ
+  const [loadedMessages, setLoadedMessages] = useState<MessageType[]>([])    // Stores messages loaded from history
 
   // ============================================================================
-  // STEP 2: FUNCTION DEFINITIONS - การประกาศฟังก์ชัน
+  // STEP 2: FUNCTION DEFINITIONS - Declaring Functions
   // ============================================================================
 
   const loadChatHistory = async (sessionIdToLoad: string) => {
-    // ตรวจสอบว่ามี sessionId หรือไม่
+    // Check if sessionId exists
     if (!sessionIdToLoad) return
 
-    // เริ่มแสดงสถานะ loading
+    // Start showing loading status
     setIsLoadingHistory(true)
     
     try {
-      // เรียก API เพื่อดึงประวัติการสนทนา
+      // Call API to retrieve chat history
       const apiUrl = buildApiUrl(API_BASE, { sessionId: sessionIdToLoad })
       const response = await fetch(apiUrl)
       
-      // ตรวจสอบว่า API response สำเร็จหรือไม่
+      // Check if API response was successful
       if (!response.ok) {
         throw new Error('Failed to load chat history')
       }
       
-      // แยกข้อมูล JSON จาก response
+      // Extract JSON data from the response
       const data = await response.json()
       const loadedMessagesData = data.messages || []
       
       /**
-       * แปลงข้อความจาก database format เป็น UI format
+       * Convert messages from database format to UI format
        * 
        * Database Format: { id, role, content/text }
        * UI Format: { id, role, parts: [{ type: 'text', text }] }
@@ -211,120 +211,126 @@ export function NewChat() {
         content?: string; 
         text?: string 
       }, index: number) => ({
-        id: msg.id || `loaded-${index}`,                                     // ใช้ ID จาก DB หรือสร้างใหม่
-        role: msg.role || 'user',                                            // ใช้ role ที่ได้จาก API โดยตรง
-        parts: [{ type: 'text', text: msg.content || msg.text || '' }]       // แปลงเป็น parts format
+        id: msg.id || `loaded-${index}`,                                     // Use ID from DB or create a new one
+        role: msg.role || 'user',                                            // Use the role obtained directly from API
+        parts: [{ type: 'text', text: msg.content || msg.text || '' }]       // Convert to parts format
       }))
       
-      // เก็บข้อความที่โหลดไว้ใน state
+      // Store loaded messages in state
       setLoadedMessages(formattedMessages)
       console.log('Loaded messages:', formattedMessages)
       
     } catch (error) {
-      // จัดการข้อผิดพลาดที่เกิดขึ้น
+      // Handle errors that occur
       console.error('Error loading chat history:', error)
     } finally {
-      // หยุดแสดงสถานะ loading (ทำงานไม่ว่าจะสำเร็จหรือไม่)
+      // Stop showing loading status (runs whether successful or not)
       setIsLoadingHistory(false)
     }
   }
 
   // ============================================================================
-  // STEP 3: CHAT HOOK INITIALIZATION - การตั้งค่า useChat Hook
+  // STEP 3: CHAT HOOK INITIALIZATION - Setting up useChat Hook
   // ============================================================================
   const { messages, sendMessage, status, setMessages, stop } = useChat({
 
     transport: createCustomChatTransport({
-      api: API_BASE,                                                        // API endpoint สำหรับส่งข้อความ
+      api: API_BASE,                                                        // API endpoint for sending messages
       
       onResponse: (response: Response) => {
-        const newSessionId = response.headers.get('x-session-id');           // ดึง session ID จาก header
+        const newSessionId = response.headers.get('x-session-id');           // Retrieve session ID from the header
         if (newSessionId) {
           console.log('Received new session ID:', newSessionId);
-          setSessionId(newSessionId);                                        // อัปเดต session ID ใน state
-          localStorage.setItem('currentSessionId', newSessionId);            // บันทึก sessionId ล่าสุดไว้ใน localStorage
+          setSessionId(newSessionId);                                        // Update session ID in the state
+          localStorage.setItem('currentSessionId', newSessionId);            // Save the latest sessionId in localStorage
+          
+          // Trigger event so the sidebar reloads history and shows the latest session
+          window.dispatchEvent(new Event('chat-session-created'));
+          
+          // Navigate to the new chat's history page using replaceState (without reloading the page)
+          window.history.replaceState(null, '', `/chat/${newSessionId}`);
         }
       },
     }),
   })
 
   // ============================================================================
-  // STEP 4: AUTHENTICATION EFFECT - การตรวจสอบและจัดการ Authentication
+  // STEP 4: AUTHENTICATION EFFECT - Authentication Checking and Management
   // ============================================================================
 
   useEffect(() => {
-    const supabase = createClient()                                          // สร้าง Supabase client
+    const supabase = createClient()                                          // Create Supabase client
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()              // ดึงข้อมูล user
+      const { data: { user } } = await supabase.auth.getUser()              // Retrieve user data
       if (user) {
-        setUserId(user.id)                                                   // เก็บ user ID
+        setUserId(user.id)                                                   // Store user ID
 
         const savedSessionId = localStorage.getItem('currentSessionId')
         if (savedSessionId && showWelcome) {
-          setSessionId(savedSessionId)                                       // ตั้งค่า session ID
-          setShowWelcome(false)                                              // ซ่อน welcome เพื่อแสดงประวัติ
+          setSessionId(savedSessionId)                                       // Set session ID
+          setShowWelcome(false)                                              // Hide welcome to show history
         }
       }
     }
 
-    getUser()                                                                // เรียกใช้ฟังก์ชัน
+    getUser()                                                                // Call the function
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setUserId(session.user.id)                                           // เก็บ user ID
+        setUserId(session.user.id)                                           // Store user ID
       } else {
-        setUserId('')                                                        // ล้าง user ID
+        setUserId('')                                                        // Clear user ID
       }
     })
 
     /**
      * Cleanup function
-     * ยกเลิก subscription เมื่อ component unmount
+     * Cancel subscription when the component unmounts
      */
     return () => subscription.unsubscribe()
   }, [setShowWelcome, showWelcome])
 
   // ============================================================================
-  // STEP 5: UI FOCUS EFFECT - การจัดการ Focus ของ UI
+  // STEP 5: UI FOCUS EFFECT - Managing UI Focus
   // ============================================================================
 
   useEffect(() => {
     if (showWelcome) {
       setTimeout(() => {
-        textareaRef.current?.focus()                                         // Focus textarea หลังจาก 100ms
+        textareaRef.current?.focus()                                         // Focus textarea after 100ms
       }, 100)
     }
   }, [showWelcome])
 
   // ============================================================================
-  // STEP 6: CHAT RESET EFFECT - การจัดการการรีเซ็ต Chat
+  // STEP 6: CHAT RESET EFFECT - Managing Chat Reset
   // ============================================================================
 
   useEffect(() => {
-    // เมื่อกด New Chat (showWelcome = true จาก context)
+    // When New Chat is clicked (showWelcome = true from context)
     if (showWelcome) {
-      // เคลียร์ sessionId และ messages ทันที
-      setSessionId(undefined)                                                // ล้าง session ID
-      setMessages([])                                                        // ล้างข้อความจาก useChat
-      setLoadedMessages([])                                                  // ล้างข้อความที่โหลดจากประวัติ
+      // Clear sessionId and messages immediately
+      setSessionId(undefined)                                                // Clear session ID
+      setMessages([])                                                        // Clear messages from useChat
+      setLoadedMessages([])                                                  // Clear messages loaded from history
     }
   }, [showWelcome, setMessages])
 
   // ============================================================================
-  // STEP 7: HISTORY LOADING EFFECT - การโหลดประวัติการสนทนา
+  // STEP 7: HISTORY LOADING EFFECT - Loading Chat History
   // ============================================================================
   useEffect(() => {
-    // โหลดประวัติเฉพาะเมื่อไม่ใช่ welcome state และมี sessionId
+    // Load history only when not in welcome state and sessionId exists
     if (sessionId && userId && !showWelcome) {
-      loadChatHistory(sessionId)                                             // เรียกฟังก์ชันโหลดประวัติ
+      loadChatHistory(sessionId)                                             // Call history loading function
     }
   }, [sessionId, userId, showWelcome])
 
   // ============================================================================
-  // STEP 8: EVENT HANDLER FUNCTIONS - ฟังก์ชันจัดการ Events
+  // STEP 8: EVENT HANDLER FUNCTIONS - Event Handler Functions
   // ============================================================================
   const handleSubmit = () => {
-    // ตรวจสอบ userId และข้อความว่าง
+    // Check for userId and empty messages
     if (!prompt.trim() || !userId) return
 
     const messageToSend = {
@@ -334,32 +340,32 @@ export function NewChat() {
 
     sendMessage(messageToSend, {
       body: {
-        userId: userId,                                                      // ส่ง user ID สำหรับการระบุตัวตน
-        sessionId: sessionId,                                               // ส่ง session ID สำหรับความต่อเนื่อง
+        userId: userId,                                                      // Send user ID for identification
+        sessionId: sessionId,                                               // Send session ID for continuity
       },
     })
 
-    // รีเซ็ต UI state
-    setPrompt("")                                                            // ล้างข้อความใน input
-    setShowWelcome(false)                                                    // ซ่อนหน้า welcome
+    // Reset UI state
+    setPrompt("")                                                            // Clear input message
+    setShowWelcome(false)                                                    // Hide welcome screen
   }
 
   const handleSamplePrompt = (samplePrompt: string) => {
-    setPrompt(samplePrompt)                                                  // ตั้งค่าข้อความใน input
+    setPrompt(samplePrompt)                                                  // Set input message
   }
 
   const handleStop = () => {
-    stop()                                                                   // หยุดการส่งข้อความ
+    stop()                                                                   // Stop message transmission
   }
 
   const handleCopyMessage = async (content: string, messageId: string) => {
     try {
       await navigator.clipboard.writeText(content)
       
-      // แสดง check icon
+      // Show check icon
       setCopiedMessages(prev => ({ ...prev, [messageId]: true }))
       
-      // กลับไปเป็น copy icon หลังจาก 2 วินาที
+      // Revert to copy icon after 2 seconds
       setTimeout(() => {
         setCopiedMessages(prev => ({ ...prev, [messageId]: false }))
       }, 2000)
@@ -371,22 +377,22 @@ export function NewChat() {
   }
 
   // ============================================================================
-  // STEP 9: AUTHENTICATION GUARD - การตรวจสอบสิทธิ์การเข้าถึง
+  // STEP 9: AUTHENTICATION GUARD - Access Rights Checking
   // ============================================================================
   if (!userId) {
     return (
       <main className="flex h-screen flex-col overflow-hidden">
-        {/* Header Section - ส่วนหัวของหน้า */}
-        <header className="bg-background z-10 flex h-16 w-full shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />                              {/* ปุ่มเปิด/ปิด sidebar */}
-          <div className="text-foreground flex-1">New Chat</div>            {/* ชื่อหน้า */}
+        {/* Header Section */}
+        <header className="bg-white/80 backdrop-blur-md z-10 flex h-14 w-full shrink-0 items-center gap-2 border-b border-sky-100/80 px-4 dark:bg-slate-900/80 dark:border-slate-800">
+          <SidebarTrigger className="-ml-1 text-slate-500 hover:text-sky-600" />
+          <div className="text-slate-700 dark:text-slate-200 flex-1 font-medium text-sm">New Chat</div>
         </header>
         
-        {/* Content Section - ส่วนเนื้อหาหลัก */}
-        <div className="flex-1 flex items-center justify-center">
+        {/* Content Section */}
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-white to-sky-50/40 dark:from-slate-950 dark:to-slate-900">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">กรุณาเข้าสู่ระบบ</h2>
-            <p className="text-gray-500">คุณต้องเข้าสู่ระบบก่อนเพื่อใช้งาน Chat</p>
+            <h2 className="text-lg font-semibold text-slate-600 dark:text-slate-300 mb-2">Please log in</h2>
+            <p className="text-slate-400 dark:text-slate-500 text-sm">You must log in first to use the Chat</p>
           </div>
         </div>
       </main>
@@ -394,99 +400,95 @@ export function NewChat() {
   }
 
   // ============================================================================
-  // STEP 10: MAIN RENDER - การแสดงผลหน้าหลัก
+  // STEP 10: MAIN RENDER - Main Render Section
   // ============================================================================
   return (
     <main className="flex h-screen flex-col overflow-hidden">
       
-      {/* ============================================================================ */}
-      {/* HEADER SECTION - ส่วนหัวของหน้า */}
-      {/* ============================================================================ */}
-      
-      <header className="bg-background z-10 flex h-16 w-full shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />                                {/* ปุ่มเปิด/ปิด sidebar */}
-        <div className="text-foreground flex-1">New Chat</div>              {/* ชื่อหน้า */}
+      {/* HEADER SECTION */}
+      <header className="bg-white/80 backdrop-blur-md z-10 flex h-14 w-full shrink-0 items-center gap-2 border-b border-sky-100/80 px-4 dark:bg-slate-900/80 dark:border-slate-800">
+        <SidebarTrigger className="-ml-1 text-slate-500 hover:text-sky-600" />
+        <div className="text-slate-700 dark:text-slate-200 flex-1 font-medium text-sm">New Chat</div>
         
         {/* Model Selector */}
-        <ModelSelector
+        {/* <ModelSelector
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
-        />
+        /> */}
       </header>
 
       {/* ============================================================================ */}
-      {/* CHAT CONTAINER SECTION - ส่วนแสดงข้อความการสนทนา */}
+      {/* CHAT CONTAINER SECTION - Message Display Area */}
       {/* ============================================================================ */}
       
-      <div ref={chatContainerRef} className="relative flex-1 overflow-hidden">
+      <div ref={chatContainerRef} className="relative flex-1 overflow-hidden bg-gradient-to-b from-white to-sky-50/30 dark:from-slate-950 dark:to-slate-900">
         <ChatContainerRoot className="h-full">
           <ChatContainerContent
             className={cn(
               "p-4",
-              // แสดง welcome screen ตรงกลางเมื่อไม่มีข้อความ
               (showWelcome && messages.length === 0 && loadedMessages.length === 0) 
                 ? "flex items-center justify-center h-full" 
                 : ""
             )}
           >
             {/* ============================================================================ */}
-            {/* CONDITIONAL CONTENT - เนื้อหาที่แสดงตามสถานะ */}
+            {/* CONDITIONAL CONTENT - Content Displayed Based on Status */}
             {/* ============================================================================ */}
             
-            {/* Welcome Screen - หน้าต้อนรับสำหรับการสนทนาใหม่ */}
+            {/* Welcome Screen - Welcome page for new conversations */}
             {(showWelcome && messages.length === 0 && loadedMessages.length === 0) ? (
               /**
                * Welcome Screen Layout
                * 
                * Components:
-               * 1. AI Avatar และ Welcome Message
+               * 1. AI Avatar and Welcome Message
                * 2. Sample Prompts Grid
-               * 3. Interactive Buttons สำหรับ quick start
+               * 3. Interactive Buttons for quick start
                */
               <div className="text-center max-w-3xl mx-auto">
                 
-                {/* AI Avatar และ Welcome Message */}
-                <div className="mb-8">
-                  <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-2xl">AI</span>
+                {/* AI Avatar & Welcome */}
+                <div className="mb-10 flex flex-col items-center">
+                  <div className="h-[72px] px-8 mb-5 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-200 dark:shadow-sky-900/40 whitespace-nowrap">
+                    <span className="text-white font-bold text-2xl">BKK AI</span>
                   </div>
-                  <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                    Welcome to Genius AI
+                  <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-3 tracking-tight">
+                    Welcome to BKK AI
                   </h1>
-                  <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-                    ยินดีต้อนรับสู่ AI Chatbot ที่ขับเคลื่อนด้วย LangChain และ OpenAI
-          ฉันพร้อมช่วยคุณในหลากหลายงาน เริ่มต้นด้วยตัวอย่างด้านล่างหรือพิมพ์คำถามของคุณเลย
+                  <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg mx-auto">
+                    Welcome to BKK AI <br />
+                    I'm ready to help you with a variety of tasks. Start with the examples below or type your question now.
                   </p>
                 </div>
 
-                {/* Sample Prompts Grid - ตัวอย่างคำถามสำหรับ quick start */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Sample Prompts Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {samplePrompts.map((sample, index) => (
                     <button 
                       key={index}
-                      onClick={() => handleSamplePrompt(sample.prompt)}          // ใส่ prompt เมื่อคลิก
-                      className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg p-4 text-left transition"
+                      onClick={() => handleSamplePrompt(sample.prompt)}
+                      className="bg-white hover:bg-sky-50 border border-sky-100 hover:border-sky-200 dark:bg-slate-800/70 dark:hover:bg-slate-800 dark:border-slate-700 rounded-xl p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm shadow-none group"
                     >
-                      <div className="text-3xl mb-2">{sample.icon}</div>          {/* ไอคอน */}
-                      <h3 className="font-semibold text-lg mb-1">{sample.title}</h3> {/* ชื่อ prompt */}
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{sample.prompt}</p> {/* คำอธิบาย */}
+                      <div className="text-2xl mb-2">{sample.icon}</div>
+                      <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-1">{sample.title}</h3>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">{sample.prompt}</p>
                     </button>
                   ))}
                 </div>
               </div>
             ) : (
               // ============================================================================
-              // CHAT MESSAGES DISPLAY - การแสดงข้อความการสนทนา
+              // CHAT MESSAGES DISPLAY - Conversation Message Display
               // ============================================================================
               <div className="space-y-3 max-w-3xl mx-auto w-full">
-                {/* รวม loadedMessages และ messages จาก useChat โดยกรองข้อความซ้ำ */}
+                {/* Combine loadedMessages and messages from useChat while filtering duplicates */}
                 {(() => {
-                  // สำหรับ New Chat ใช้เฉพาะ messages จาก useChat
+                  // For New Chat, use only messages from useChat
                   if (!sessionId || loadedMessages.length === 0) {
                     return messages
                   }
                   
-                  // สำหรับ chat ที่มีประวัติ ให้รวมกันโดยกรองซ้ำ
+                  // For chats with history, combine them with duplicate filtering
                   const allMessages = [...loadedMessages, ...messages]
                   const uniqueMessages = []
                   const seenContent = new Set()
@@ -507,7 +509,7 @@ export function NewChat() {
                 })().map((message, index) => {
                   const isAssistant = message.role === "assistant"
                   
-                  // คำนวณ content สำหรับใช้ใน copy function
+                  // Calculate content for use in the copy function
                   const messageContent = typeof message === 'object' && 'parts' in message && message.parts
                     ? message.parts.map((part) => 'text' in part ? part.text : '').join('')
                     : String(message)
@@ -521,7 +523,7 @@ export function NewChat() {
                       <MessageContent
                         isAssistant={isAssistant}
                         bubbleStyle={true}
-                        markdown={isAssistant} // แสดง markdown เฉพาะ assistant เท่านั้น
+                        markdown={isAssistant} // Display markdown for assistant only
                       >
                         {messageContent}
                       </MessageContent>
@@ -530,7 +532,7 @@ export function NewChat() {
                         isAssistant={isAssistant}
                         bubbleStyle={true}
                       >
-                        <MessageAction tooltip="Copy" bubbleStyle={true}>
+                        <MessageAction tooltip="" bubbleStyle={true}>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -553,53 +555,48 @@ export function NewChat() {
           </ChatContainerContent>
           
           {/* ============================================================================ */}
-          {/* SCROLL BUTTON - ปุ่มสำหรับ scroll ไปข้างล่าง */}
+          {/* SCROLL BUTTON - Button for scrolling to the bottom */}
           {/* ============================================================================ */}
           
-          {/* แสดง scroll button เฉพาะเมื่อไม่ใช่ welcome screen */}
+          {/* Show scroll button only when not on the welcome screen */}
           {!(showWelcome && messages.length === 0 && loadedMessages.length === 0) && (
             <div className="absolute bottom-4 left-1/2 flex w-full max-w-3xl -translate-x-1/2 justify-end px-5">
-              <ScrollButton className="shadow-sm" />                        {/* ปุ่ม scroll to bottom */}
+              <ScrollButton className="shadow-sm" />                        {/* Scroll to bottom button */}
             </div>
           )}
         </ChatContainerRoot>
       </div>
 
       {/* ============================================================================ */}
-      {/* INPUT SECTION - ส่วนรับ input จากผู้ใช้ */}
+      {/* INPUT SECTION - User Input Area */}
       {/* ============================================================================ */}
       
-      <div className="bg-background z-[5] shrink-0 px-3 pb-3 md:px-5 md:pb-5">
+      <div className="bg-white/90 backdrop-blur-md dark:bg-slate-900/90 border-t border-sky-100/60 dark:border-slate-800 z-[5] shrink-0 px-3 pb-3 md:px-5 md:pb-5">
         <div className="mx-auto max-w-3xl">
           
-          {/* ============================================================================ */}
-          {/* STATUS INDICATORS - แสดงสถานะต่างๆ */}
-          {/* ============================================================================ */}
-          
-          {/* แสดงสถานะการพิมพ์ของ AI */}
+          {/* Status Indicators */}
           {(status === 'submitted' || status === 'streaming') && 
-            <div className="text-gray-500 italic mb-2 text-sm">🤔 AI กำลังคิด...</div>
+            <div className="text-sky-500 dark:text-sky-400 italic mb-2 text-xs font-medium flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse"></span>AI is thinking...</div>
           }
           
-          {/* แสดงสถานะการโหลดประวัติ */}
           {isLoadingHistory && 
-            <div className="text-blue-500 italic mb-2 text-sm">📚 กำลังโหลดประวัติการสนทนา...</div>
+            <div className="text-sky-500 dark:text-sky-400 italic mb-2 text-xs font-medium">📚 Loading chat history...</div>
           }
           
           {/* ============================================================================ */}
-          {/* PROMPT INPUT COMPONENT - ส่วน input หลัก */}
+          {/* PROMPT INPUT COMPONENT - Main Input Section */}
           {/* ============================================================================ */}
           <PromptInput
             isLoading={status !== 'ready'}
             value={prompt}
             onValueChange={setPrompt}
             onSubmit={handleSubmit}
-            className="border-input bg-popover relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-xs"
+            className="border-sky-200/80 bg-white dark:bg-slate-800 dark:border-slate-700 relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-md shadow-sky-100/50 dark:shadow-slate-900/50 transition-all duration-200 focus-within:shadow-lg focus-within:border-sky-300 dark:focus-within:border-sky-700"
           >
             <div className="flex flex-col">
               
               {/* ============================================================================ */}
-              {/* TEXTAREA INPUT - ช่องพิมพ์ข้อความ */}
+              {/* TEXTAREA INPUT - Text Typing Field */}
               {/* ============================================================================ */}
               
               <PromptInputTextarea
@@ -609,15 +606,15 @@ export function NewChat() {
               />
 
               {/* ============================================================================ */}
-              {/* INPUT ACTIONS - ปุ่มต่างๆ ใน input area */}
+              {/* INPUT ACTIONS - Various buttons in the input area */}
               {/* ============================================================================ */}
 
               <PromptInputActions className="mt-5 flex w-full items-center justify-between gap-2 px-3 pb-3">
                 
-                {/* Left Actions Group - กลุ่มปุ่มด้านซ้าย */}
+                {/* Left Actions Group - Button group on the left */}
                 <div className="flex items-center gap-2">
                   
-                  {/* Add Action Button - ปุ่มเพิ่ม action */}
+                  {/* Add Action Button - Button to add an action */}
                   <PromptInputAction tooltip="Add a new action">
                     <Button
                       variant="outline"
@@ -628,7 +625,7 @@ export function NewChat() {
                     </Button>
                   </PromptInputAction>
 
-                  {/* Search Button - ปุ่มค้นหา */}
+                  {/* Search Button - Search button */}
                   <PromptInputAction tooltip="Search">
                     <Button variant="outline" className="rounded-full">
                       <Globe size={18} />
@@ -636,7 +633,7 @@ export function NewChat() {
                     </Button>
                   </PromptInputAction>
 
-                  {/* More Actions Button - ปุ่ม action เพิ่มเติม */}
+                  {/* More Actions Button - Additional actions button */}
                   <PromptInputAction tooltip="More actions">
                     <Button
                       variant="outline"
@@ -648,10 +645,10 @@ export function NewChat() {
                   </PromptInputAction>
                 </div>
                 
-                {/* Right Actions Group - กลุ่มปุ่มด้านขวา */}
+                {/* Right Actions Group - Button group on the right */}
                 <div className="flex items-center gap-2">
                   
-                  {/* Voice Input Button - ปุ่ม voice input */}
+                  {/* Voice Input Button - Voice input button */}
                   <PromptInputAction tooltip="Voice input">
                     <Button
                       variant="outline"
@@ -662,7 +659,7 @@ export function NewChat() {
                     </Button>
                   </PromptInputAction>
 
-                  {/* Send/Stop Button - ปุ่มส่งข้อความหรือหยุด */}
+                  {/* Send/Stop Button - Send or Stop message button */}
                   <Button
                     size="icon"
                     disabled={
@@ -675,15 +672,15 @@ export function NewChat() {
                     className="size-9 rounded-full"
                     variant={status === 'ready' ? 'default' : 'destructive'}
                   >
-                    {/* แสดง icon ตาม status */}
+                    {/* Display icon based on status */}
                     {status === 'ready' ? (
-                      /* แสดงลูกศรเมื่อพร้อม */
+                      /* Show arrow when ready */
                       <ArrowUp size={18} />
                     ) : status === 'streaming' || status === 'submitted' ? (
-                      /* แสดงปุ่ม stop เมื่อกำลังส่ง */
+                      /* Show stop button when sending */
                       <Square size={18} fill="currentColor" />
                     ) : (
-                      /* แสดง loading indicator สำหรับ status อื่นๆ */
+                      /* Show loading indicator for other statuses */
                       <span className="size-3 rounded-xs bg-white" />
                     )}
                   </Button>

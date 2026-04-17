@@ -1,142 +1,142 @@
 /**
  * ============================================================================
- * THEME PROVIDER - ระบบจัดการ Theme สำหรับ Light/Dark Mode
+ * THEME PROVIDER - Theme Management System for Light/Dark Mode
  * ============================================================================
  * 
- * Provider นี้จัดการ theme ของทั้งแอปพลิเคชัน รองรับ:
- * - Light Mode: โหมดสว่าง
- * - Dark Mode: โหมดมืด  
- * - System Mode: ปรับตาม system preference
+ * This provider manages the theme of the entire application, supporting:
+ * - Light Mode
+ * - Dark Mode
+ * - System Mode: Adjust based on system preference
  * 
  * Features:
- * - เก็บ theme preference ใน localStorage
- * - รองรับ system preference detection
- * - มี force override สำหรับ light/dark mode
- * - ใช้ CSS classes และ data attributes
+ * - Store theme preference in localStorage
+ * - Support system preference detection
+ * - Provide force override for light/dark mode
+ * - Use CSS classes and data attributes
  */
 
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 
-// ประเภท theme ที่รองรับ
+// Supported theme types
 type Theme = "light" | "dark" | "system"
 
-// Props สำหรับ ThemeProvider component
+// Props for ThemeProvider component
 type ThemeProviderProps = {
-  children: React.ReactNode           // Component ลูกที่จะถูก wrap
-  defaultTheme?: Theme               // Theme เริ่มต้น (default: "system")
-  storageKey?: string                // Key สำหรับเก็บใน localStorage (default: "ui-theme")
+  children: React.ReactNode           // Child components to be wrapped
+  defaultTheme?: Theme               // Initial theme (default: "system")
+  storageKey?: string                // Key for localStorage storage (default: "ui-theme")
 }
 
-// State และ methods ที่จะส่งผ่าน Context
+// State and methods that will be passed via Context
 type ThemeProviderState = {
-  theme: Theme                       // Theme ปัจจุบัน
-  setTheme: (theme: Theme) => void   // ฟังก์ชันเปลี่ยน theme
+  theme: Theme                       // Current theme
+  setTheme: (theme: Theme) => void   // Function to change theme
 }
 
-// ค่าเริ่มต้นของ Context
+// Context initial state
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
 }
 
-// สร้าง Context สำหรับแชร์ theme state
+// Create Context for sharing theme state
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
-// Export Context เพื่อให้ components อื่นสามารถใช้ได้
+// Export Context so other components can use it
 export { ThemeProviderContext }
 
 /**
- * ThemeProvider Component - จัดการ theme ของทั้งแอปพลิเคชัน
+ * ThemeProvider Component - Manages application-wide theme
  * 
- * รับผิดชอบ:
- * - เก็บ theme state ปัจจุบัน
- * - โหลด theme จาก localStorage
- * - ปรับ CSS classes และ attributes ตาม theme
- * - Listen การเปลี่ยนแปลง system preference
+ * Responsibilities:
+ * - Maintain current theme state
+ * - Load theme from localStorage
+ * - Update CSS classes and attributes based on theme
+ * - Listen for system preference changes
  */
 export function ThemeProvider({
   children,
-  defaultTheme = "system",     // Theme เริ่มต้น
-  storageKey = "ui-theme",     // Key สำหรับ localStorage
+  defaultTheme = "system",     // Initial theme
+  storageKey = "ui-theme",     // Key for localStorage
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme)  // Theme ปัจจุบัน
-  const [mounted, setMounted] = useState(false)           // สถานะการ mount ของ component
+  const [theme, setTheme] = useState<Theme>(defaultTheme)  // Current theme
+  const [mounted, setMounted] = useState(false)           // Component mount status
 
   /**
-   * Effect แรก: โหลด theme จาก localStorage เมื่อ component mount
+   * Initial Effect: Load theme from localStorage when component mounts
    */
   useEffect(() => {
-    setMounted(true)                                               // ตั้งสถานะ mounted เป็น true
-    const storedTheme = localStorage?.getItem(storageKey) as Theme // ดึง theme จาก localStorage
+    setMounted(true)                                               // Set mounted status to true
+    const storedTheme = localStorage?.getItem(storageKey) as Theme // Retrieve theme from localStorage
     if (storedTheme) {
-      setTheme(storedTheme)                                        // ใช้ theme จาก localStorage
+      setTheme(storedTheme)                                        // Apply theme from localStorage
     }
   }, [storageKey])
 
   /**
-   * Effect หลัก: ปรับ CSS classes และ attributes ตาม theme
-   * ทำงานเมื่อ theme หรือ mounted state เปลี่ยน
+   * Main Effect: Update CSS classes and attributes based on theme
+   * Executes when theme or mounted state changes
    */
   useEffect(() => {
-    if (!mounted) return                                           // รอให้ component mount เสร็จก่อน
+    if (!mounted) return                                           // Wait for component to complete mounting
 
-    const root = window.document.documentElement                   // ดึง root element (<html>)
+    const root = window.document.documentElement                   // Retrieve root element (<html>)
 
-    // ลบ class และ attribute เดิมออกก่อน
+    // Remove existing classes and attributes first
     root.classList.remove("light", "dark", "force-light", "force-dark")
     root.removeAttribute("data-theme")
 
     if (theme === "system") {
-      // สำหรับ system mode: ปรับตาม system preference
+      // For system mode: Adjust based on system preference
       const applySystemTheme = () => {
-        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches  // เช็ค system preference
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches  // Check system preference
         
-        root.classList.remove("light", "dark")                    // ลบ theme class เดิม
+        root.classList.remove("light", "dark")                    // Remove existing theme classes
         if (systemPrefersDark) {
-          root.classList.add("dark")                              // เพิ่ม dark class
+          root.classList.add("dark")                              // Add dark class
         } else {
-          root.classList.add("light")                             // เพิ่ม light class
+          root.classList.add("light")                             // Add light class
         }
       }
 
-      applySystemTheme()                                           // ปรับ theme ทันที
+      applySystemTheme()                                           // Apply theme immediately
       
-      root.setAttribute("data-theme", "system")                   // เพิ่ม data-theme="system"
+      root.setAttribute("data-theme", "system")                   // Add data-theme="system"
 
-      // Listen การเปลี่ยนแปลง system preference
+      // Listen for system preference changes
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
       mediaQuery.addEventListener("change", applySystemTheme)
       
-      // Cleanup listener เมื่อ component unmount หรือ theme เปลี่ยน
+      // Cleanup listener on unmount or theme change
       return () => {
         mediaQuery.removeEventListener("change", applySystemTheme)
       }
     }
 
-    // สำหรับ force theme (light หรือ dark)
-    root.setAttribute("data-theme", theme)                         // เพิ่ม data-theme attribute
-    root.classList.add(theme)                                      // เพิ่ม theme class (backward compatibility)
+    // For forced theme (light or dark)
+    root.setAttribute("data-theme", theme)                         // Add data-theme attribute
+    root.classList.add(theme)                                      // Add theme class (backward compatibility)
     
-    // เพิ่ม force class เพื่อ override media query
+    // Add force class to override media query
     if (theme === "light") {
-      root.classList.add("force-light")                           // บังคับใช้ light mode
+      root.classList.add("force-light")                           // Force light mode
     } else if (theme === "dark") {
-      root.classList.add("force-dark")                            // บังคับใช้ dark mode
+      root.classList.add("force-dark")                            // Force dark mode
     }
   }, [theme, mounted])
 
-  // สร้าง value object สำหรับ Context Provider
+  // Create value object for Context Provider
   const value = {
-    theme,                                                         // Theme ปัจจุบัน
-    setTheme: (theme: Theme) => {                                  // ฟังก์ชันเปลี่ยน theme
-      localStorage?.setItem(storageKey, theme)                     // เก็บ theme ลง localStorage
-      setTheme(theme)                                              // อัพเดท theme state
+    theme,                                                         // Current theme
+    setTheme: (theme: Theme) => {                                  // Function to change theme
+      localStorage?.setItem(storageKey, theme)                     // Store theme in localStorage
+      setTheme(theme)                                              // Update theme state
     },
   }
 
-  // Render Provider พร้อม value
+  // Render Provider with value
   return (
     <ThemeProviderContext.Provider value={value}>
       {children}
@@ -145,20 +145,20 @@ export function ThemeProvider({
 }
 
 /**
- * Custom Hook สำหรับใช้งาน Theme Context
+ * Custom Hook for using Theme Context
  * 
- * ใช้สำหรับ:
- * - ดึง theme ปัจจุบัน
- * - เปลี่ยน theme ผ่านฟังก์ชัน setTheme
+ * Used for:
+ * - Retrieve current theme
+ * - Change theme via setTheme function
  * 
- * ต้องใช้ภายใน ThemeProvider เท่านั้น
+ * Must be used within ThemeProvider
  */
 export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)                 // ดึง context
+  const context = useContext(ThemeProviderContext)                 // Retrieve context
 
-  // ตรวจสอบว่าใช้ใน ThemeProvider หรือไม่
+  // Validate Usage within ThemeProvider
   if (context === undefined)
     throw new Error("useTheme must be used within a ThemeProvider")
 
-  return context                                                   // ส่งคืน theme state และ methods
+  return context                                                   // Return theme state and methods
 }

@@ -10,30 +10,30 @@ import { User } from '@supabase/supabase-js'
 
 export default function NewChatSimple() {
 
-  // State สำหรับเก็บข้อมูล user
+  // State to store user data
   const [user, setUser] = useState<User | null>(null)
   const [displayName, setDisplayName] = useState<string>('')
 
-  // ใช้ useChat hook เพื่อจัดการสถานะการสนทนา
+  // Use useChat hook to manage conversation state
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/chat_04_stream',
     })
   })
 
-  // กำหนด state สำหรับ input text
+  // Define state for input text
   const [input, setInput] = useState('')
 
-  // ดึงข้อมูล user เมื่อ component mount
+  // Fetch user data when component mounts
   useEffect(() => {
     const supabase = createClient()
     
-    // ดึงข้อมูล user ปัจจุบัน
+    // Fetch current user data
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setUser(user)
-        // ดึง display_name จาก user metadata
+        // Get display_name from user metadata
         const displayNameFromMeta = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
         setDisplayName(displayNameFromMeta)
       }
@@ -42,7 +42,7 @@ export default function NewChatSimple() {
     // Call method getUser
     getUser()
 
-    // Listen สำหรับการเปลี่ยนแปลง auth state
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -66,7 +66,7 @@ export default function NewChatSimple() {
         <div className="absolute top-4 right-4 flex items-center gap-3">
           {displayName && (
             <div className="text-sm text-gray-600">
-              <span className="hidden sm:inline">สวัสดี, </span>
+              <span className="hidden sm:inline">Hello, </span>
               <span className="font-medium text-gray-800">{displayName}</span>
             </div>
           )}
@@ -80,13 +80,13 @@ export default function NewChatSimple() {
           {messages.length === 0 && (
             <div className="flex flex-col justify-center items-center text-center text-gray-500 h-full">
               <div>
-                <p className="text-lg">👋 สวัสดีครับ!</p>
-                <p className="mt-2">เริ่มการสนทนาได้เลยครับ</p>
+                <p className="text-lg">👋 Hello!</p>
+                <p className="mt-2">Start conversation</p>
               </div>
             </div>
           )}
 
-          {/* แสดง Messages */}
+          {/* Render Messages */}
           {messages.map(m => (
             <div
               key={m.id}
@@ -113,30 +113,30 @@ export default function NewChatSimple() {
       {/* Input Area */}
       <div className="bg-white border-t p-4">
         <div className="max-w-3xl mx-auto w-full">
-          {/* แสดงสถานะการพิมพ์ของ AI */}
+          {/* Show AI typing status */}
           {(status === 'submitted' || status === 'streaming') && 
-            <div className="text-gray-500 italic mb-2 text-sm">🤔 AI กำลังคิด...</div>
+            <div className="text-gray-500 italic mb-2 text-sm">🤔 AI is thinking...</div>
           }
 
           <form
             className="flex items-center space-x-2"
             onSubmit={e => {
-            e.preventDefault() // ป้องกันหน้า refresh
-            if (!input.trim()) return // ไม่ส่งถ้า input ว่าง
+            e.preventDefault() // Prevent page refresh
+            if (!input.trim()) return // Do not send if input is empty
 
-            // เรียกใช้ sendMessage ที่ได้จาก useChat โดยตรง
+            // Call sendMessage directly from useChat
             sendMessage({
               text: input,
             })
 
-            // ล้างช่อง input หลังจากส่ง
+            // Clear input field after sending
             setInput('')
           }}
         >
           <input
             className="flex-grow p-3 border border-gray-300 text-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={input}
-            placeholder="พิมพ์ข้อความที่นี่..."
+            placeholder="Type your message here..."
             onChange={e => setInput(e.target.value)}
             disabled={status !== 'ready'}
           />

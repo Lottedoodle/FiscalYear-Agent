@@ -17,30 +17,30 @@ export const config = {
      */
 
     /*
-    การแยกโครงสร้าง Regex
-    1. / … / 
-      - หมายถึง regex pattern ครอบทั้งหมด (Next.js จะใช้ regex นี้เป็นตัวกรอง path)
+    Regex Structure Breakdown
+    1. / ... / 
+      - Represents the complete regex pattern (Next.js uses this to filter paths)
 
     2. ((?! ... ).*) 
-      - ?! ... คือ Negative Lookahead → แปลว่า "ต้องไม่ตรงกับสิ่งที่อยู่ในวงเล็บ"
-      - .* คือ match ทุกตัวอักษรที่เหลือหลังจากตรวจสอบว่าไม่ตรงกับ pattern ใน ?!
-      - ดังนั้นมันคือ "match path อะไรก็ได้ ยกเว้น สิ่งที่กำหนดในวงเล็บ"
+      - ?! ... is a Negative Lookahead → meaning "must not match the content within the parentheses"
+      - .* matches all characters that follow after verifying it doesn't match the pattern in ?!
+      - Therefore, it means "match any path except those specified in the parentheses"
 
-    3. สิ่งที่ถูก exclude (ไม่ให้ middleware จับ)
-      - _next/static → ไฟล์ static ของ Next.js
-      - _next/image → ไฟล์ image optimization ของ Next.js
-      - favicon.ico → ไฟล์ favicon
-      - .*\.(?:svg|png|jpg|jpeg|gif|webp)$ → ไฟล์รูปภาพสกุลต่าง ๆ (svg, png, jpg, jpeg, gif, webp)
+    3. Excluded items (not captured by middleware)
+      - _next/static → Next.js static files
+      - _next/image → Next.js image optimization files
+      - favicon.ico → Favicon file
+      - .*\.(?:svg|png|jpg|jpeg|gif|webp)$ → Various image files (svg, png, jpg, jpeg, gif, webp)
 
-    สรุปความหมาย
-    Middleware ตัวนี้จะ ทำงานกับทุก request path
-    ยกเว้น
-      - ไฟล์ static ที่อยู่ใน _next/static
-      - รูปภาพ optimization _next/image
-      - ไฟล์ favicon ที่ชื่อว่า favicon.ico
-      - ไฟล์รูปภาพที่มีนามสกุล .svg, .png, .jpg, .jpeg, .gif, .webp
+    Summary of meaning
+    This middleware will process every request path
+    Except:
+      - Static files within _next/static
+      - Image optimization via _next/image
+      - The favicon.ico file
+      - Image files with extensions .svg, .png, .jpg, .jpeg, .gif, .webp
     */
 
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

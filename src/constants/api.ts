@@ -1,6 +1,6 @@
-export const API_BASE = '/api/chat_09_rag_tool_calling'
+export const API_BASE = '/api/chat'
 
-export const API_BASE_SESSION = '/api/chat_09_rag_tool_calling/session'
+export const API_BASE_SESSION = '/api/chat/session'
 
 export function buildApiUrl(endpoint: string, params?: Record<string, string | number | boolean>): string {
   if (!params || Object.keys(params).length === 0) {
@@ -18,3 +18,6 @@ export function buildApiUrl(endpoint: string, params?: Record<string, string | n
   const queryString = searchParams.toString()
   return queryString ? `${endpoint}?${queryString}` : endpoint
 }
+
+
+

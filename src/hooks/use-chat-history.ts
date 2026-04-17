@@ -1,18 +1,18 @@
 /**
  * ===============================================
- * useChatHistory Hook - Custom Hook สำหรับจัดการประวัติการสนทนา
+ * useChatHistory Hook - Custom Hook for managing chat history
  * ===============================================
  * 
- * คำอธิบาย:
- * Custom Hook สำหรับจัดการประวัติการสนทนาแบบครบวงจร
- * รองรับการส่งข้อความแบบ streaming, โหลดประวัติ, และจัดการ sessions
+ * Description:
+ * Integrated Custom Hook for managing chat history
+ * Supports message streaming, history loading, and session management
  * 
- * ฟีเจอร์หลัก:
- * - ส่งข้อความและรับคำตอบแบบ real-time streaming
- * - โหลดประวัติการสนทนาจาก session ID
- * - จัดการ session state และ error handling
- * - รองรับการสร้าง chat ใหม่และสลับ session
- * - ส่งข้อความผ่าน form submission
+ * Main features:
+ * - Real-time message sending and streaming response receipt
+ * - Load chat history from a session ID
+ * - Manage session state and error handling
+ * - Support for creating new chats and switching sessions
+ * - Message sending via form submission
  */
 
 "use client"
@@ -22,129 +22,129 @@ import { generateUniqueId } from '@/lib/utils'
 import { API_BASE } from '@/constants/api'
 
 // ===============================================
-// Interface Definitions - กำหนดโครงสร้างข้อมูล
+// Interface Definitions - Defining data structures
 // ===============================================
 
 /**
- * Interface สำหรับ Chat Message
+ * Interface for Chat Message
  * 
- * @param id - ID เฉพาะของข้อความ
- * @param role - บทบาทของผู้ส่ง (user, assistant, system)
- * @param content - เนื้อหาข้อความ
- * @param createdAt - เวลาที่สร้างข้อความ (optional)
+ * @param id - Unique message ID
+ * @param role - Sender's role (user, assistant, system)
+ * @param content - Message content
+ * @param createdAt - Message creation time (optional)
  */
 export interface ChatMessage {
-  id: string                                    // ID เฉพาะของข้อความ
-  role: 'user' | 'assistant' | 'system'        // บทบาทของผู้ส่งข้อความ
-  content: string                               // เนื้อหาข้อความ
-  createdAt?: string                            // เวลาที่สร้างข้อความ (ISO string)
+  id: string                                    // Unique message ID
+  role: 'user' | 'assistant' | 'system'        // Sender's role
+  content: string                               // Message content
+  createdAt?: string                            // Message creation time (ISO string)
 }
 
 // ===============================================
-// Main Hook Function - ฟังก์ชันหลักของ Custom Hook
+// Main Hook Function - Main Custom Hook function
 // ===============================================
 
 /**
  * useChatHistory Hook
  * 
- * Hook สำหรับจัดการประวัติการสนทนาและ real-time messaging
+ * Hook for managing chat history and real-time messaging
  * 
- * @param initialSessionId - Session ID เริ่มต้น (optional)
- * @param userId - ID ของผู้ใช้สำหรับ authentication (optional)
+ * @param initialSessionId - Initial Session ID (optional)
+ * @param userId - User ID for authentication (optional)
  * 
- * @returns Object ที่ประกอบด้วย states, actions และ functions ต่างๆ
+ * @returns Object containing various states, actions, and functions
  */
 export function useChatHistory(initialSessionId?: string, userId?: string) {
   
   // ===============================================
-  // State Management - การจัดการ State ต่างๆ
+  // State Management - Managing various states
   // ===============================================
   
   /**
-   * Session ID ปัจจุบันที่กำลังใช้งาน
-   * undefined หมายถึงยังไม่มี session หรือ session ใหม่
+   * Current Session ID in use
+   * undefined means no session or a new session
    */
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(initialSessionId)
   
   /**
-   * รายการข้อความในการสนทนาปัจจุบัน
-   * Array ของ ChatMessage objects
+   * List of messages in the current conversation
+   * Array of ChatMessage objects
    */
   const [messages, setMessages] = useState<ChatMessage[]>([])
   
   /**
-   * สถานะการส่งข้อความ
-   * true = กำลังส่งข้อความและรอคำตอบ
+   * Message sending status
+   * true = sending message and waiting for response
    */
   const [loading, setLoading] = useState(false)
   
   /**
-   * สถานะการโหลดประวัติการสนทนา
-   * true = กำลังโหลดประวัติจาก database
+   * Chat history loading status
+   * true = loading history from database
    */
   const [loadingHistory, setLoadingHistory] = useState(false)
   
   /**
-   * ข้อผิดพลาดที่เกิดขึ้นในการทำงาน
-   * null หมายถึงไม่มีข้อผิดพลาด
+   * Working error
+   * null means no error
    */
   const [historyError, setHistoryError] = useState<string | null>(null)
   
   /**
-   * ข้อความที่ผู้ใช้พิมพ์ใน input field
+   * Text typed by user in the input field
    */
   const [input, setInput] = useState('')
 
   /**
-   * AbortController สำหรับยกเลิกการส่งข้อความ
+   * AbortController for canceling message transmission
    */
   const [abortController, setAbortController] = useState<AbortController | null>(null)
 
   // ===============================================
-  // Main Functions - ฟังก์ชันหลักของ Hook
+  // Main Functions - Main Hook functions
   // ===============================================
   
   /**
-   * ฟังก์ชันส่งข้อความและรับคำตอบแบบ streaming
+   * Function for sending messages and receiving streaming responses
    * 
-   * Flow การทำงาน:
-   * 1. ตรวจสอบเงื่อนไข (ข้อความไม่ว่าง, ไม่กำลัง loading)
-   * 2. เพิ่มข้อความของผู้ใช้ลง UI
-   * 3. แปลงข้อความเป็นรูปแบบ AI SDK
-   * 4. ส่ง request ไป API
-   * 5. อ่าน response แบบ streaming
-   * 6. อัพเดท UI แบบ real-time
-   * 7. จัดการ error หากมี
+   * Workflow:
+   * 1. Validate conditions (non-empty message, not loading)
+   * 2. Add user message to UI
+   * 3. Convert message to AI SDK format
+   * 4. Send request to API
+   * 5. Read response via streaming
+   * 6. Update UI in real-time
+   * 7. Handle errors if any
    * 
-   * @param message - ข้อความที่ต้องการส่ง
+   * @param message - Message to be sent
    * @returns Promise<void>
    */
   const sendMessage = useCallback(async (message: string) => {
-    // Step 1: ตรวจสอบเงื่อนไขเบื้องต้น
+    // Step 1: Initial validation
     if (!message.trim() || loading) return
 
-    // เริ่มสถานะ loading และเคลียร์ error
+    // Start loading status and clear error
     setLoading(true)
     setHistoryError(null)
 
-    // สร้าง AbortController สำหรับยกเลิกการส่ง
+    // Create AbortController for cancelation
     const controller = new AbortController()
     setAbortController(controller)
 
-    // Step 2: สร้างข้อความของผู้ใช้พร้อม temporary ID
+    // Step 2: Create user message with temporary ID
     const userMessage: ChatMessage = {
-      id: generateUniqueId('temp-user'),       // ID ชั่วคราวสำหรับ UI
-      role: 'user',                            // ระบุว่าเป็นข้อความจากผู้ใช้
-      content: message,                        // เนื้อหาข้อความ
-      createdAt: new Date().toISOString(),     // เวลาปัจจุบัน
+      id: generateUniqueId('temp-user'),       // Temporary ID for UI
+      role: 'user',                            // Identify as user message
+      content: message,                        // Message content
+      createdAt: new Date().toISOString(),     // Current time
     }
 
-    // เพิ่มข้อความผู้ใช้ลง state และ clear input
+    // Add user message to state and clear input
     const updatedMessages = [...messages, userMessage]
     setMessages(updatedMessages)
     setInput('')
 
-    // Step 3: แปลงข้อความให้เป็นรูปแบบที่ API รองรับ (AI SDK format)
+    // Step 3: Convert message to API supported format (AI SDK format)
     const apiMessages = updatedMessages.map(msg => ({
       id: msg.id,
       role: msg.role,
@@ -152,48 +152,48 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
     }))
 
     try {
-      // Step 4: ส่ง request ไปยัง API
+      // Step 4: Send request to API
       const response = await fetch(API_BASE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: apiMessages,                // ข้อความทั้งหมดในการสนทนา
-          sessionId: currentSessionId,          // Session ID ปัจจุบัน
-          userId: userId,                       // ID ของผู้ใช้จาก auth system
+          messages: apiMessages,                // All messages in the conversation
+          sessionId: currentSessionId,          // Current Session ID
+          userId: userId,                       // User ID from auth system
         }),
-        signal: controller.signal,              // เพิ่ม AbortSignal
+        signal: controller.signal,              // Add AbortSignal
       })
 
       if (!response.ok) {
         throw new Error('Failed to send message')
       }
 
-      // Step 5: ดึง sessionId จาก response header
+      // Step 5: Extract sessionId from response header
       const sessionId = response.headers.get('x-session-id')
       if (sessionId && !currentSessionId) {
         setCurrentSessionId(sessionId)
       }
 
-      // Step 6: เตรียมอ่าน response stream
+      // Step 6: Prepare to read response stream
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No response body')
 
-      // สร้างข้อความ AI เปล่าๆ สำหรับแสดงใน UI
+      // Create empty AI message for UI display
       const assistantMessage: ChatMessage = {
-        id: generateUniqueId('temp-assistant'), // ID ชั่วคราวสำหรับ AI
-        role: 'assistant',                      // ระบุว่าเป็นข้อความจาก AI
-        content: '',                            // เริ่มต้นด้วยเนื้อหาว่าง
+        id: generateUniqueId('temp-assistant'), // Temporary ID for AI
+        role: 'assistant',                      // Identify as AI message
+        content: '',                            // Message content
         createdAt: new Date().toISOString(),
       }
 
-      // เพิ่มข้อความ AI ลง UI
+      // Add AI message to UI
       setMessages(prev => [...prev, assistantMessage])
 
-      // Step 7: อ่านและประมวลผล streaming response
+      // Step 7: Read and process streaming response
       const decoder = new TextDecoder()
-      let accumulatedContent = ''              // เก็บเนื้อหาที่ได้รับทั้งหมด
+      let accumulatedContent = ''              // Store all received content
 
       while (true) {
         const { done, value } = await reader.read()
@@ -201,22 +201,22 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
 
         const chunk = decoder.decode(value, { stream: true })
         
-        // แยกบรรทัดใน chunk (SSE format)
+        // Split chunk into lines (SSE format)
         const lines = chunk.split('\n')
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const jsonStr = line.slice(6)     // ตัด "data: " ออก
+              const jsonStr = line.slice(6)     // Strip "data: "
               if (jsonStr === '[DONE]') break
               
               const data = JSON.parse(jsonStr)
               
-              // ตรวจสอบรูปแบบข้อมูลจาก AI SDK
+              // Validate AI SDK data format
               if (data.type === 'text-delta' && data.delta) {
                 accumulatedContent += data.delta
                 
-                // อัพเดทเนื้อหาข้อความของ AI แบบ real-time
+                // Update AI message content in real-time
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessage.id 
                     ? { ...msg, content: accumulatedContent }
@@ -224,7 +224,7 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
                 ))
               }
             } catch (e) {
-              // ถ้า parse JSON ไม่ได้ ข้ามไปไม่ต้อง error
+              // If JSON parse fails, skip without error
               console.warn('Failed to parse streaming data:', line)
               console.error(e)
             }
@@ -232,7 +232,7 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
         }
       }
     } catch (error) {
-      // Step 8: จัดการ error
+      // Step 8: Error handling
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was aborted')
       } else {
@@ -240,14 +240,14 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
         console.error('Send message error:', error)
       }
     } finally {
-      // Step 9: จบกระบวนการ - ปิด loading และเคลียร์ controller
+      // Step 9: Process completion - close loading and clear controller
       setLoading(false)
       setAbortController(null)
     }
   }, [messages, currentSessionId, loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * ฟังก์ชันหยุดการส่งข้อความ
+   * Function to stop message transmission
    */
   const stopMessage = useCallback(() => {
     if (abortController) {
@@ -258,29 +258,29 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
   }, [abortController])
 
   // ===============================================
-  // History Management Functions - ฟังก์ชันจัดการประวัติ
+  // History Management Functions - History management functions
   // ===============================================
   
   /**
-   * ฟังก์ชันโหลดประวัติข้อความจาก session
+   * Function for loading message history from session
    * 
-   * Flow การทำงาน:
-   * 1. เริ่มสถานะ loading และเคลียร์ error
-   * 2. ส่ง GET request ไป API พร้อม sessionId
-   * 3. ดึงข้อมูลข้อความจาก response
-   * 4. อัพเดท messages state
-   * 5. จัดการ error หากมี
+   * Workflow:
+   * 1. Start loading status and clear error
+   * 2. Send GET request to API with sessionId
+   * 3. Extract message data from response
+   * 4. Update messages state
+   * 5. Handle errors if any
    * 
-   * @param sessionId - ID ของ session ที่ต้องการโหลดประวัติ
+   * @param sessionId - ID of the session to load history for
    * @returns Promise<void>
    */
   const loadChatHistory = async (sessionId: string) => {
-    // Step 1: เริ่มสถานะ loading
+    // Step 1: Start loading status
     setLoadingHistory(true)
     setHistoryError(null)
     
     try {
-      // Step 2: ส่ง request ไป API สำหรับดึงประวัติ
+      // Step 2: Send request to API for history retrieval
       const apiUrl = `${API_BASE}?sessionId=${sessionId}`
       const response = await fetch(apiUrl)
       
@@ -288,127 +288,127 @@ export function useChatHistory(initialSessionId?: string, userId?: string) {
         throw new Error('Failed to load chat history')
       }
       
-      // Step 3: ดึงข้อมูลจาก response
+      // Step 3: Extract data from response
       const data = await response.json()
       const loadedMessages: ChatMessage[] = data.messages || []
       
-      // Step 4: อัพเดท state
-      setMessages(loadedMessages)              // ตั้งค่าข้อความที่โหลดมา
-      setCurrentSessionId(sessionId)          // ตั้งค่า session ID ปัจจุบัน
+      // Step 4: Update state
+      setMessages(loadedMessages)              // Set loaded messages
+      setCurrentSessionId(sessionId)          // Set current session ID
       
     } catch (err) {
-      // Step 5: จัดการ error
+      // Step 5: Error handling
       setHistoryError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
-      // Step 6: ปิด loading state
+      // Step 6: Close loading state
       setLoadingHistory(false)
     }
   }
 
   // ===============================================
-  // Session Management Functions - ฟังก์ชันจัดการ Session
+  // Session Management Functions - Session management functions
   // ===============================================
   
   /**
-   * ฟังก์ชันเริ่ม chat session ใหม่
+   * Function for starting a new chat session
    * 
-   * การทำงาน:
-   * - เคลียร์ session ID ปัจจุบัน
-   * - เคลียร์ข้อความทั้งหมด
-   * - เคลียร์ error state
-   * - เคลียร์ input field
+   * Description:
+   * - Clear current session ID
+   * - Clear all messages
+   * - Clear error status
+   * - Clear input field
    */
   const startNewChat = () => {
-    setCurrentSessionId(undefined)           // ไม่มี session ID (session ใหม่)
-    setMessages([])                          // เคลียร์ข้อความทั้งหมด
-    setHistoryError(null)                    // เคลียร์ error
-    setInput('')                             // เคลียร์ input field
+    setCurrentSessionId(undefined)           // No session ID (new session)
+    setMessages([])                          // Clear all messages
+    setHistoryError(null)                    // Clear error
+    setInput('')                             // Clear input field
   }
 
   /**
-   * ฟังก์ชันสลับไปยัง session อื่น
+   * Function for switching to another session
    * 
-   * การทำงาน:
-   * 1. ตรวจสอบว่าเป็น session เดียวกันหรือไม่
-   * 2. ถ้าไม่ใช่ ให้โหลดประวัติของ session ใหม่
+   * Description:
+   * 1. Validate if it's the same session
+   * 2. If not, load history for the new session
    * 
-   * @param sessionId - ID ของ session ที่ต้องการสลับไป
+   * @param sessionId - ID of the session to switch to
    * @returns Promise<void>
    */
   const switchToSession = async (sessionId: string) => {
-    // Step 1: ตรวจสอบว่าเป็น session เดียวกันหรือไม่
+    // Step 1: Validate if it's the same session
     if (sessionId === currentSessionId) return
     
-    // Step 2: โหลดประวัติของ session ใหม่
+    // Step 2: Load history for the new session
     await loadChatHistory(sessionId)
   }
 
   // ===============================================
-  // Form Handling Functions - ฟังก์ชันจัดการ Form
+  // Form Handling Functions - Form handling functions
   // ===============================================
   
   /**
-   * ฟังก์ชันจัดการการ submit form
+   * Function for handling form submission
    * 
-   * การทำงาน:
-   * 1. ป้องกัน default form submission
-   * 2. ตรวจสอบว่ามีข้อความใน input หรือไม่
-   * 3. เรียก sendMessage ถ้ามีข้อความ
+   * Description:
+   * 1. Prevent default form submission
+   * 2. Validate if there's message in the input
+   * 3. Call sendMessage if there's message
    * 
    * @param e - React Form Event
    */
   const handleSubmit = (e: React.FormEvent) => {
-    // Step 1: ป้องกัน page reload
+    // Step 1: Prevent page reload
     e.preventDefault()
     
-    // Step 2 & 3: ตรวจสอบและส่งข้อความ
+    // Step 2 & 3: Validate and send message
     if (input.trim()) {
       sendMessage(input)
     }
   }
 
   // ===============================================
-  // Return Object - การส่งคืนค่าจาก Hook
+  // Return Object - Returning values from Hook
   // ===============================================
   
   /**
-   * ส่งคืน object ที่ประกอบด้วย states และ functions
-   * แบ่งเป็นกลุ่มตามการใช้งาน:
+   * Return object containing states and functions
+   * Grouped by usage:
    * 
-   * 1. Messages and State - ข้อมูลข้อความและสถานะ
-   * 2. Actions - การกระทำต่างๆ
-   * 3. Session Management - การจัดการ session
-   * 4. Loading States - สถานะการโหลดต่างๆ
+   * 1. Messages and State - Message data and status
+   * 2. Actions - Various actions
+   * 3. Session Management - Session management
+   * 4. Loading States - Various loading statuses
    */
   return {
     // ===============================================
-    // Messages and State - ข้อมูลข้อความและสถานะ
+    // Messages and State - Message data and status
     // ===============================================
-    messages,           // รายการข้อความในการสนทนาปัจจุบัน
-    loading,            // สถานะการส่งข้อความ (true = กำลังส่ง)
-    input,              // ข้อความที่ผู้ใช้พิมพ์ใน input field
-    setInput,           // ฟังก์ชันตั้งค่าข้อความใน input field
+    messages,           // List of messages in the current conversation
+    loading,            // Message sending status (true = sending)
+    input,              // Text typed by user in the input field
+    setInput,           // Function to set input field text
     
     // ===============================================
-    // Actions - การกระทำต่างๆ
+    // Actions - Various actions
     // ===============================================
-    sendMessage,        // ฟังก์ชันส่งข้อความ (รับ string parameter)
-    stopMessage,        // ฟังก์ชันหยุดการส่งข้อความ
-    handleSubmit,       // ฟังก์ชันจัดการ form submission
+    sendMessage,        // Function for sending message (takes string parameter)
+    stopMessage,        // Function to stop message transmission
+    handleSubmit,       // Function for handling form submission
     
     // ===============================================
-    // Session Management - การจัดการ session
+    // Session Management - Session management
     // ===============================================
-    currentSessionId,   // Session ID ปัจจุบัน (undefined = session ใหม่)
-    setCurrentSessionId, // ฟังก์ชันตั้งค่า session ID
-    loadChatHistory,    // ฟังก์ชันโหลดประวัติจาก session ID
-    startNewChat,       // ฟังก์ชันเริ่ม chat ใหม่ (เคลียร์ทุกอย่าง)
-    switchToSession,    // ฟังก์ชันสลับไป session อื่น
+    currentSessionId,   // Current Session ID (undefined = new session)
+    setCurrentSessionId, // Function to set session ID
+    loadChatHistory,    // Function for loading history from session ID
+    startNewChat,       // Function for starting new chat (clear everything)
+    switchToSession,    // Function for switching to another session
     
     // ===============================================
-    // Loading States - สถานะการโหลดต่างๆ
+    // Loading States - Various loading statuses
     // ===============================================
-    loadingHistory,     // สถานะการโหลดประวัติ (true = กำลังโหลด)
-    historyError,       // ข้อผิดพลาดที่เกิดขึ้น (null = ไม่มี error)
+    loadingHistory,     // History loading status (true = loading)
+    historyError,       // Occurred error (null = no error)
   }
 }

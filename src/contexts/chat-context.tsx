@@ -3,23 +3,23 @@
  * Chat Context Provider
  * ===============================================
  * 
- * Purpose: จัดการ state ของการสนทนาในระดับ global
+ * Purpose: Manage chat state at a global level
  * 
  * Features:
- * - จัดการรายการข้อความในการสนทนา
- * - ควบคุมการแสดงข้อความต้อนรับ
- * - ฟังก์ชัน reset การสนทนา
- * - แชร์ state ระหว่าง components ต่างๆ
+ * - Manage list of conversation messages
+ * - Control welcome message display
+ * - Chat reset function
+ * - Share state between various components
  * 
  * Pattern: React Context API
- * - ใช้ createContext สำหรับสร้าง context
- * - ใช้ Provider สำหรับแชร์ state
- * - ใช้ custom hook สำหรับเข้าถึง context
+ * - Use createContext to create context
+ * - Use Provider to share state
+ * - Use custom hook to access context
  * 
  * State Management:
- * - chatMessages: รายการข้อความทั้งหมดในการสนทนา
- * - showWelcome: สถานะการแสดงหน้าต้อนรับ
- * - resetChat: ฟังก์ชันรีเซ็ตการสนทนา
+ * - chatMessages: All conversation messages
+ * - showWelcome: Welcome screen display status
+ * - resetChat: Conversation reset function
  */
 
 "use client"
@@ -27,149 +27,146 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
 
 // ===============================================
-// TypeScript Interface Definitions - กำหนด Type Definitions
+// TypeScript Interface Definitions - Defining types
 // ===============================================
 
 /**
- * Interface สำหรับ Chat Context Type
+ * Interface for Chat Context Type
  * 
  * Properties:
- * - chatMessages: array ของข้อความในการสนทนา
- * - setChatMessages: ฟังก์ชันสำหรับอัปเดตรายการข้อความ
- * - showWelcome: สถานะการแสดงหน้าต้อนรับ
- * - setShowWelcome: ฟังก์ชันสำหรับเปลี่ยนสถานะหน้าต้อนรับ
- * - resetChat: ฟังก์ชันรีเซ็ตการสนทนา
+ * - chatMessages: Array of conversation messages
+ * - setChatMessages: Function to update message list
+ * - showWelcome: Welcome screen display status
+ * - setShowWelcome: Function to change welcome screen status
+ * - resetChat: Conversation reset function
  */
 interface ChatContextType {
   chatMessages: Array<{
-    id: number                                                              // ID เฉพาะของข้อความ
-    role: string                                                            // บทบาทของผู้ส่ง (user/assistant)
-    content: string                                                         // เนื้อหาข้อความ
+    id: number                                                              // Unique message ID
+    role: string                                                            // Sender's role (user/assistant)
+    content: string                                                         // Message content
   }>
   setChatMessages: React.Dispatch<React.SetStateAction<Array<{
-    id: number                                                              // ID เฉพาะของข้อความ
-    role: string                                                            // บทบาทของผู้ส่ง (user/assistant)
-    content: string                                                         // เนื้อหาข้อความ
+    id: number                                                              // Unique message ID
+    role: string                                                            // Sender's role (user/assistant)
+    content: string                                                         // Message content
   }>>>
-  showWelcome: boolean                                                      // สถานะการแสดงหน้าต้อนรับ
-  setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>            // ฟังก์ชันเปลี่ยนสถานะหน้าต้อนรับ
-  resetChat: () => void                                                     // ฟังก์ชันรีเซ็ตการสนทนา
+  showWelcome: boolean                                                      // Welcome screen display status
+  setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>            // Function to change welcome screen status
+  resetChat: () => void                                                     // Conversation reset function
 }
 
 // ===============================================
-// Context Creation - สร้าง React Context
+// Context Creation - Creating React Context
 // ===============================================
 
 /**
- * สร้าง Chat Context สำหรับแชร์ state ระหว่าง components
+ * Creating Chat Context for sharing state between components
  * 
  * Initial Value: undefined
- * - เพื่อบังคับให้ใช้ context ผ่าน Provider เท่านั้น
- * - ป้องกันการใช้ context นอก Provider
+ * - To force context usage via Provider only
+ * - Prevent context usage outside Provider
  */
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
 // ===============================================
-// Chat Provider Component - ตัวจัดการ State หลัก
+// Chat Provider Component - Main State Handler
 // ===============================================
 
 /**
- * ChatProvider Component: จัดการ state ของการสนทนาทั้งหมด
+ * ChatProvider Component: Manages all conversation state
  * 
  * Purpose:
- * - เป็น wrapper component ที่แชร์ chat state
- * - จัดการ state ของข้อความและการแสดงผล
- * - ให้ context ให้กับ child components ทั้งหมด
+ * - A wrapper component that shares chat state
+ * - Manages message state and rendering
+ * - Provides context to all child components
  * 
  * State Management:
- * - ใช้ useState สำหรับจัดการ local state
- * - ใช้ useCallback สำหรับ optimize performance
+ * - Use useState to manage local state
+ * - Use useCallback for performance optimization
  * 
- * @param children - Child components ที่จะได้รับ context
- * @returns JSX.Element ที่ wrap children ด้วย Context Provider
+ * @param children - Child components that will receive context
+ * @returns JSX.Element that wraps children with Context Provider
  */
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ===============================================
-  // Step 1: State Initialization - กำหนด State เริ่มต้น
+  // Step 1: State Initialization - Defining initial state
   // ===============================================
   
   /**
-   * State สำหรับเก็บรายการข้อความในการสนทนา
+   * State to store list of conversation messages
    * 
-   * Initial Value: [] (array ว่าง)
+   * Initial Value: [] (empty array)
    * 
    * Message Structure:
-   * - id: number - ID เฉพาะของข้อความ
-   * - role: string - บทบาท ('user' หรือ 'assistant')
-   * - content: string - เนื้อหาข้อความ
+   * - id: number - Unique message ID
+   * - role: string - Role ('user' or 'assistant')
+   * - content: string - Message content
    */
   const [chatMessages, setChatMessages] = useState<Array<{
-    id: number                                                              // ID เฉพาะของข้อความ
-    role: string                                                            // บทบาทของผู้ส่ง
-    content: string                                                         // เนื้อหาข้อความ
-  }>>([])                                                                   // เริ่มต้นด้วย array ว่าง
-
+    id: number                                                              // Unique message ID
+    role: string                                                            // Sender's role
+    content: string                                                         // Message content
+  }>>([])                                                                   // Initialize with an empty array
   /**
-   * State สำหรับควบคุมการแสดงหน้าต้อนรับ
+   * State to control welcome screen display
    * 
    * Initial Value: true
    * 
    * Usage:
-   * - true: แสดงหน้าต้อนรับ (เมื่อยังไม่มีการสนทนา)
-   * - false: ซ่อนหน้าต้อนรับ (เมื่อมีการสนทนาแล้ว)
+   * - true: Show welcome screen (when no conversation yet)
+   * - false: Hide welcome screen (when conversation started)
    */
-  const [showWelcome, setShowWelcome] = useState(true)                      // แสดงหน้าต้อนรับเริ่มต้น
-
+  const [showWelcome, setShowWelcome] = useState(true)                      // Welcome screen display status
   // ===============================================
-  // Step 2: Callback Functions - ฟังก์ชันสำหรับจัดการ State
+  // Step 2: Callback Functions - Functions to manage state
   // ===============================================
   
   /**
-   * ฟังก์ชันรีเซ็ตการสนทนา
+   * Conversation reset function
    * 
    * Purpose:
-   * - ล้างข้อความทั้งหมดในการสนทนา
-   * - แสดงหน้าต้อนรับใหม่
-   * - กลับไปสู่สถานะเริ่มต้น
+   * - Clear all conversation messages
+   * - Show welcome screen again
+   * - Revert to initial state
    * 
    * Performance Optimization:
-   * - ใช้ useCallback เพื่อป้องกัน unnecessary re-renders
-   * - dependency array ว่าง [] เพราะไม่ depend on external values
+   * - Use useCallback to prevent unnecessary re-renders
+   * - Empty dependency array [] as it doesn't depend on external values
    * 
    * Usage:
-   * - เรียกใช้เมื่อต้องการเริ่มการสนทนาใหม่
-   * - เรียกใช้เมื่อต้องการล้างประวัติการสนทนา
+   * - Used when a new conversation is needed
+   * - Used when chat history needs to be cleared
    */
   const resetChat = useCallback(() => {
-    setChatMessages([])                                                     // ล้างรายการข้อความ
-    setShowWelcome(true)                                                    // แสดงหน้าต้อนรับ
-  }, [])                                                                    // ไม่มี dependencies
-
+    setChatMessages([])                                                     // Clear message list
+    setShowWelcome(true)                                                    // Show welcome screen
+  }, [])                                                                    // No dependencies
   // ===============================================
-  // Step 3: Context Provider - จัดเตรียม Context Values
+  // Step 3: Context Provider - Providing context values
   // ===============================================
   
   /**
-   * ส่งคืน Context Provider พร้อมกับ values ทั้งหมด
+   * Return Context Provider with all values
    * 
    * Provider Values:
-   * - chatMessages: รายการข้อความปัจจุบัน
-   * - setChatMessages: ฟังก์ชันอัปเดตข้อความ
-   * - showWelcome: สถานะการแสดงหน้าต้อนรับ
-   * - setShowWelcome: ฟังก์ชันเปลี่ยนสถานะหน้าต้อนรับ
-   * - resetChat: ฟังก์ชันรีเซ็ตการสนทนา
+   * - chatMessages: List of current messages
+   * - setChatMessages: Function to update messages
+   * - showWelcome: Welcome screen display status
+   * - setShowWelcome: Function to change welcome screen status
+   * - resetChat: Conversation reset function
    * 
    * Child Components:
-   * - ทุก component ที่อยู่ภายใต้ Provider นี้
-   * - สามารถเข้าถึง context values ผ่าน useChatContext hook
+   * - Every component under this Provider
+   * - Can access context values via useChatContext hook
    */
   return (
     <ChatContext.Provider value={{
-      chatMessages,                                                         // รายการข้อความ
-      setChatMessages,                                                      // ฟังก์ชันอัปเดตข้อความ
-      showWelcome,                                                          // สถานะหน้าต้อนรับ
-      setShowWelcome,                                                       // ฟังก์ชันเปลี่ยนสถานะหน้าต้อนรับ
-      resetChat                                                             // ฟังก์ชันรีเซ็ตการสนทนา
+      chatMessages,                                                         // List of messages
+      setChatMessages,                                                      // Function to update messages
+      showWelcome,                                                          // Welcome screen status
+      setShowWelcome,                                                       // Function to change welcome screen status
+      resetChat                                                             // Conversation reset function
     }}>
       {children}
     </ChatContext.Provider>
@@ -177,77 +174,74 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 }
 
 // ===============================================
-// Custom Hook: useChatContext - Hook สำหรับเข้าถึง Chat Context
+// Custom Hook: useChatContext - Hook for accessing Chat Context
 // ===============================================
 
 /**
- * useChatContext Hook: Custom hook สำหรับเข้าถึง Chat Context
+ * useChatContext Hook: Custom hook for accessing Chat Context
  * 
  * Purpose:
- * - ให้ interface ที่ง่ายสำหรับเข้าถึง chat context
- * - ตรวจสอบว่า hook ถูกใช้ภายใต้ Provider หรือไม่
- * - ป้องกัน runtime errors จากการใช้ context ผิดที่
+ * - Provides an easy interface for accessing chat context
+ * - Verify if the hook is used under a Provider
+ * - Prevent runtime errors from misusing context
  * 
  * Usage Pattern:
  * ```tsx
  * function MyComponent() {
  *   const { chatMessages, setChatMessages, resetChat } = useChatContext()
- *   // ใช้งาน context values ได้เลย
+ *   // Use context values directly
  * }
  * ```
  * 
  * Error Handling:
- * - ถ้าใช้นอก ChatProvider จะ throw error
- * - ช่วยให้ developer รู้ทันทีว่าใช้ผิดที่
+ * - If used outside ChatProvider, throw an error
+ * - Helps developers immediately identify misuse
  * 
- * @returns ChatContextType object ที่มี state และ functions ทั้งหมด
- * @throws Error หากใช้นอก ChatProvider
+ * @returns ChatContextType object containing all state and functions
+ * @throws Error if used outside ChatProvider
  */
 export function useChatContext() {
   // ===============================================
-  // Step 1: Get Context Value - ดึงค่า Context
+  // Step 1: Get Context Value - Retrieving context values
   // ===============================================
   
   /**
-   * ดึงค่า context จาก ChatContext
+   * Retrieve context value from ChatContext
    * 
    * Return Value:
-   * - ChatContextType object หากอยู่ภายใต้ Provider
-   * - undefined หากไม่ได้อยู่ภายใต้ Provider
+   * - ChatContextType object if under a Provider
+   * - undefined if not under a Provider
    */
-  const context = useContext(ChatContext)                                   // ดึงค่า context
-  
+  const context = useContext(ChatContext)                                   // Retrieve context value  
   // ===============================================
-  // Step 2: Validation Check - ตรวจสอบความถูกต้อง
+  // Step 2: Validation Check - Validating state
   // ===============================================
   
   /**
-   * ตรวจสอบว่า context มีค่าหรือไม่
+   * Check if context has a value
    * 
    * Validation Logic:
-   * - หาก context เป็น undefined แสดงว่าไม่ได้ใช้ภายใต้ Provider
-   * - ให้ throw error เพื่อแจ้งให้ developer ทราบ
+   * - If context is undefined, it means it's not used under a Provider
+   * - Throw an error to inform the developer
    * 
    * Error Message:
-   * - อธิบายปัญหาและวิธีแก้ไขอย่างชัดเจน
+   * - Explain the problem and solution clearly
    */
   if (context === undefined) {
-    throw new Error('useChatContext must be used within a ChatProvider')   // Error สำหรับการใช้งานผิดที่
-  }
+    throw new Error('useChatContext must be used within a ChatProvider')   // Error for unauthorized usage  }
   
   // ===============================================
-  // Step 3: Return Context Value - ส่งคืนค่า Context
+  // Step 3: Return Context Value - Returning context values
   // ===============================================
   
   /**
-   * ส่งคืน context object ที่มี values ทั้งหมด
+   * Return context object with all values
    * 
    * Available Values:
-   * - chatMessages: รายการข้อความ
-   * - setChatMessages: ฟังก์ชันอัปเดตข้อความ
-   * - showWelcome: สถานะหน้าต้อนรับ
-   * - setShowWelcome: ฟังก์ชันเปลี่ยนสถานะหน้าต้อนรับ
-   * - resetChat: ฟังก์ชันรีเซ็ตการสนทนา
+   * - chatMessages: List of messages
+   * - setChatMessages: Function to update messages
+   * - showWelcome: Welcome screen status
+   * - setShowWelcome: Function to change welcome screen status
+   * - resetChat: Conversation reset function
    */
-  return context                                                            // ส่งคืน context values
-}
+  return context                                                            // Return context values}

@@ -14,7 +14,7 @@ export default function AuthLayout({
         <Button variant="ghost" asChild className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/20">
           <Link href="/" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            กลับหน้าหลัก
+            Back to Home
           </Link>
         </Button>
       </div>
@@ -30,42 +30,41 @@ export default function AuthLayout({
         />
         
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 via-purple-600/80 to-indigo-800/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-400/90 via-sky-500/80 to-blue-500/90" />
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 text-white">
           <div className="max-w-md">
-            <div className="flex items-center space-x-2 mb-8">
-              <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <span className="text-white font-bold text-lg">AI</span>
+            <div className="flex items-center mb-8">
+              <div className="h-12 px-5 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center whitespace-nowrap">
+                <span className="text-white font-bold text-lg">BKK AI</span>
               </div>
-              <span className="text-2xl font-bold">Genius AI</span>
             </div>
             
             <h1 className="text-4xl font-bold mb-6 leading-tight">
-              เข้าสู่โลกแห่ง
+              Welcome to
               <span className="block text-transparent bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text">
-                ปัญญาประดิษฐ์
+                BKK AI
               </span>
             </h1>
             
             <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              ประสบการณ์การสนทนากับ AI ที่ฉลาดและเข้าใจคุณมากที่สุด 
-              พร้อมช่วยเหลือคุณในทุกเรื่องที่ต้องการ
+              The best AI that understands you best 
+              and is ready to help you with anything you need
             </p>
             
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                <span className="text-blue-100">ตอบสนองแบบเรียลไทม์</span>
+                <span className="text-blue-100">Real-time Responsiveness</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                <span className="text-blue-100">ความปลอดภัยระดับสูง</span>
+                <span className="text-blue-100">Enterprise-grade Security</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                <span className="text-blue-100">รองรับภาษาไทยอย่างสมบูรณ์</span>
+                <span className="text-blue-100">Comprehensive Thai Language Support</span>
               </div>
             </div>
           </div>

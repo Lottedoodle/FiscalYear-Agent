@@ -294,12 +294,12 @@ const getDatabaseInventoryTool = new DynamicStructuredTool({
         throw error;
       }
 
-      if (!data || data.length === 0) {
+      if (!data || (data as any[]).length === 0) {
         return "The database is currently empty or no public tables are accessible.";
       }
 
       // Arrange information for AI
-      const result = data.map((item: any) => 
+      const result = (data as any[]).map((item: any) => 
         `Table: ${item.table_name}\nColumns: ${item.columns}`
       ).join('\n---\n');
 

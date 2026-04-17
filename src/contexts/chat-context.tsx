@@ -228,7 +228,8 @@ export function useChatContext() {
    * - Explain the problem and solution clearly
    */
   if (context === undefined) {
-    throw new Error('useChatContext must be used within a ChatProvider')   // Error for unauthorized usage  }
+    throw new Error('useChatContext must be used within a ChatProvider')   // Error for unauthorized usage
+  }
   
   // ===============================================
   // Step 3: Return Context Value - Returning context values
@@ -244,4 +245,5 @@ export function useChatContext() {
    * - setShowWelcome: Function to change welcome screen status
    * - resetChat: Conversation reset function
    */
-  return context                                                            // Return context values}
+  return context                                                            // Return context values
+}

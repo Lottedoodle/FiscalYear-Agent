@@ -54,8 +54,19 @@ jobs:
             --env-file app.env \
             test-app:latest
 
+      - name: Show running containers
+        run: docker ps -a
+
+      - name: Wait for API to be ready
+        run: |
           echo "Waiting for API to be ready..."
           timeout 90s sh -c 'until curl -sf http://localhost:3000 > /dev/null; do echo "Still waiting..."; sleep 2; done'
+
+      - name: Debug API response
+        run: |
+          curl -i -X POST http://localhost:3000/api/chat \
+            -H "Content-Type: application/json" \
+            -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"CI test"}]}],"sessionId":"ci-session","userId":"ci-test-user"}'
 
       - name: Execute k6
         run: |
@@ -85,4 +96,3 @@ jobs:
         with:
           name: k6-report
           path: results.json
-

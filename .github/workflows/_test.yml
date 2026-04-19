@@ -17,12 +17,6 @@ jobs:
       - name: Load Docker image
         run: docker load < image.tar.gz
 
-      - name: Install k6
-        run: |
-          K6_VERSION=v0.54.0
-          curl -sL https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION#v}-linux-amd64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin --strip-components=1
-
       - name: Run App Container
         run: |
           docker run -d \
@@ -41,7 +35,7 @@ jobs:
           timeout 60s sh -c 'until curl -sf http://localhost:3000 > /dev/null; do echo "Still waiting..."; sleep 2; done'
 
       - name: Execute k6
-        run: k6 run regression-test.js --env API_URL=http://localhost:3000 --out json=results.json
+        run: docker run --network=host -v $PWD:/scripts ghcr.io/grafana/k6:latest run /scripts/regression-test.js --env API_URL=http://localhost:3000 --out json=/scripts/results.json
 
       - name: Cleanup
         if: always()

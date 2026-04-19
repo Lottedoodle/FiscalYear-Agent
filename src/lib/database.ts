@@ -38,6 +38,23 @@ interface DatabaseConfig {
 }
 
 // ===============================================
+// Helper: Parse DATABASE_URL into config
+// ===============================================
+function parseDatabaseUrl(url: string): DatabaseConfig {
+  const parsed = new URL(url)
+  return {
+    host: parsed.hostname,
+    port: Number(parsed.port) || 5432,
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: decodeURIComponent(parsed.pathname.slice(1)),
+    ssl: process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
+  }
+}
+
+// ===============================================
 // Configuration Setup
 // ===============================================
 function getDatabaseConfig(): DatabaseConfig | null {
@@ -46,7 +63,12 @@ function getDatabaseConfig(): DatabaseConfig | null {
     return null
   }
 
-  // Validate required environment variables
+  // Option 1: Use DATABASE_URL if available (e.g. CI, cloud platforms)
+  if (process.env.DATABASE_URL) {
+    return parseDatabaseUrl(process.env.DATABASE_URL)
+  }
+
+  // Option 2: Use individual PG_* env vars
   const requiredEnvVars = ['PG_HOST', 'PG_PORT', 'PG_USER', 'PG_PASSWORD', 'PG_DATABASE']
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
   

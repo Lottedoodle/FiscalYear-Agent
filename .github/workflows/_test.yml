@@ -61,11 +61,13 @@ jobs:
         run: |
           docker run --rm \
             --network host \
+            -u "$(id -u):$(id -g)" \
             -v "$PWD:/scripts" \
             ghcr.io/grafana/k6:latest \
-            run /scripts/regression-test.js \
+            run \
             --env BASE_URL=http://localhost:3000 \
-            --out json=/scripts/results.json
+            --out json=/scripts/results.json \
+            /scripts/regression-test.js
 
       - name: Show container logs on failure
         if: failure()

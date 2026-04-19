@@ -2,10 +2,24 @@ name: Test Template
 
 on:
   workflow_call:
+    secrets:
+      DATABASE_URL:
+        required: true
+      OPENAI_API_KEY:
+        required: true
+      OPENAI_MODEL_NAME:
+        required: true
+      OPENAI_EMBEDDING_MODEL_NAME:
+        required: true
+      NEXT_PUBLIC_SUPABASE_URL:
+        required: true
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY:
+        required: true
 
 jobs:
   k6-regression:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -15,31 +29,53 @@ jobs:
           name: docker-image
 
       - name: Load Docker image
-        run: docker load < image.tar.gz
+        run: |
+          gunzip -c image.tar.gz | docker load
+
+      - name: Show loaded images
+        run: docker images
+
+      - name: Create env file for container
+        run: |
+          cat > app.env <<EOF
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL_NAME=${{ secrets.OPENAI_MODEL_NAME }}
+          OPENAI_EMBEDDING_MODEL_NAME=${{ secrets.OPENAI_EMBEDDING_MODEL_NAME }}
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }}
+          EOF
 
       - name: Run App Container
         run: |
           docker run -d \
             --name app-container \
             -p 3000:3000 \
-            -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-            -e OPENAI_MODEL_NAME=${{ secrets.OPENAI_MODEL_NAME }} \
-            -e OPENAI_EMBEDDING_MODEL_NAME=${{ secrets.OPENAI_EMBEDDING_MODEL_NAME }} \
-            -e NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
-            -e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }} \
+            --env-file app.env \
             test-app:latest
-          
-          # Healthcheck: Wait until API is ready (check for HTTP 200)
+
           echo "Waiting for API to be ready..."
-          timeout 60s sh -c 'until curl -sf http://localhost:3000 > /dev/null; do echo "Still waiting..."; sleep 2; done'
+          timeout 90s sh -c 'until curl -sf http://localhost:3000 > /dev/null; do echo "Still waiting..."; sleep 2; done'
 
       - name: Execute k6
-        run: docker run --network=host -v $PWD:/scripts ghcr.io/grafana/k6:latest run /scripts/regression-test.js --env API_URL=http://localhost:3000 --out json=/scripts/results.json
+        run: |
+          docker run --rm \
+            --network host \
+            -v "$PWD:/scripts" \
+            ghcr.io/grafana/k6:latest \
+            run /scripts/regression-test.js \
+            --env BASE_URL=http://localhost:3000 \
+            --out json=/scripts/results.json
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs app-container || true
 
       - name: Cleanup
         if: always()
-        run: docker rm -f app-container 2>/dev/null || true
+        run: |
+          docker rm -f app-container 2>/dev/null || true
+          rm -f app.env
 
       - name: Archive Results
         if: always()

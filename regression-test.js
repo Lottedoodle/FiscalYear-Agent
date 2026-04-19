@@ -20,19 +20,39 @@ export const options = {
 };
 
 export default function () {
-  // Copy URL from Env or localhost as a default
-  const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
-  
-  const res = http.post(`${BASE_URL}/api/chat`, JSON.stringify({
-    messages: [{ role: 'user', parts: [{ type: 'text', text: 'CI Regression Test' }] }],
-    sessionId: '',
-    userId: 'ci-test-user',
-  }), {
-    headers: { 'Content-Type': 'application/json' },
+  const BASE_URL = __ENV.BASE_URL || __ENV.API_URL || "http://localhost:3000";
+
+  const payload = JSON.stringify({
+    messages: [
+      { role: "user", parts: [{ type: "text", text: "CI Regression Test" }] },
+    ],
+    sessionId: "ci-session",
+    userId: "ci-test-user",
   });
 
+  const res = http.post(`${BASE_URL}/api/chat`, payload, {
+    headers: { "Content-Type": "application/json" },
+    timeout: "5s",
+  });
+
+  let parsed = null;
+  try {
+    parsed = res.json();
+  } catch (_) {
+    parsed = null;
+  }
+
   check(res, {
-    'is status 200': (r) => r.status === 200,
+    "status is 200": (r) => r.status === 200,
+
+    
+    "response is not empty": (r) => !!r.body && r.body.length > 0,
+
+    
+    "has content field": () =>
+      parsed !== null &&
+      typeof parsed === "object" &&
+      parsed.content !== undefined,
   });
 
   sleep(0.5);

@@ -9,8 +9,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build temporary image
-        run: docker build -t test-app .
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load < image.tar.gz
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E1C2CD
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
 
       - name: Run App Container
         run: |
@@ -18,17 +35,19 @@ jobs:
             --name app-container \
             -p 3000:3000 \
             -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            test-app
+            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            -e OPENAI_MODEL_NAME=${{ secrets.OPENAI_MODEL_NAME }} \
+            -e OPENAI_EMBEDDING_MODEL_NAME=${{ secrets.OPENAI_EMBEDDING_MODEL_NAME }} \
+            -e NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            -e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }} \
+            test-app:latest
           
-          # Healthcheck: Wait until API is ready.
+          # Healthcheck: Wait until API is ready (check for HTTP 200)
           echo "Waiting for API to be ready..."
-          timeout 60s sh -c 'until curl -s http://localhost:3000; do echo "Still waiting..."; sleep 2; done'
+          timeout 60s sh -c 'until curl -sf http://localhost:3000 > /dev/null; do echo "Still waiting..."; sleep 2; done'
 
       - name: Execute k6
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: regression-test.js
-          flags: --env API_URL=http://localhost:3000 --out json=results.json
+        run: k6 run regression-test.js --env API_URL=http://localhost:3000 --out json=results.json
 
       - name: Cleanup
         if: always()

@@ -24,7 +24,9 @@ export default function () {
   const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
   
   const res = http.post(`${BASE_URL}/api/chat`, JSON.stringify({
-    message: 'CI Regression Test',
+    messages: [{ role: 'user', parts: [{ type: 'text', text: 'CI Regression Test' }] }],
+    sessionId: '',
+    userId: 'ci-test-user',
   }), {
     headers: { 'Content-Type': 'application/json' },
   });

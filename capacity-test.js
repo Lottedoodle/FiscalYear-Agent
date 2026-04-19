@@ -30,7 +30,9 @@ export default function () {
     const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
 
     const payload = JSON.stringify({
-        message: "What is the fiscal year of this month?",
+        messages: [{ role: 'user', parts: [{ type: 'text', text: 'What is the fiscal year of this month?' }] }],
+        sessionId: '',
+        userId: 'capacity-test-user',
     });
 
     const params = {

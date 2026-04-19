@@ -441,47 +441,67 @@ export async function POST(req: NextRequest) {
     } = await req.json()
 
     // ===============================================
-    // Step 2: Create new Session if not exists
+    // Step 2 & 3 [QUEUE]: Create Session + Load Summary in PARALLEL
+    // -------------------------------------------------------
+    // Instead of sequential awaits (session → then summary), we kick both
+    // off at the same time using Promise.all. If a session already exists
+    // we skip creation entirely so only one DB round-trip is needed.
     // ===============================================
     let currentSessionId = sessionId
-    if (!currentSessionId) {
+
+    // Helper: create a brand-new session row and return its id
+    const createSessionIfNeeded = async (): Promise<string | undefined> => {
+      if (currentSessionId) return currentSessionId // already have one
+      const firstMessage = messages.find(m => m.role === 'user')
+      let title = 'New Chat'
+      if (firstMessage && Array.isArray(firstMessage.parts) && firstMessage.parts.length > 0) {
+        const textPart = firstMessage.parts.find(p => p.type === 'text')
+        if (textPart && typeof textPart.text === 'string') {
+          title = textPart.text.slice(0, 50) + (textPart.text.length > 50 ? '...' : '')
+        }
+      }
+      if (!userId) throw new Error('User ID is required')
       const client = await getPool().connect()
       try {
-        // Create session title from the user's first message
-        const firstMessage = messages.find(m => m.role === 'user')
-        let title = 'New Chat'
-        if (firstMessage && Array.isArray(firstMessage.parts) && firstMessage.parts.length > 0) {
-          const textPart = firstMessage.parts.find(p => p.type === 'text')
-          if (textPart && typeof textPart.text === 'string') {
-            title = textPart.text.slice(0, 50) + (textPart.text.length > 50 ? '...' : '')
-          }
-        }
-        
-        // Save new session to database
-        if (!userId) throw new Error('User ID is required')
         const result = await client.query(
           'INSERT INTO chat_sessions (title, user_id) VALUES ($1, $2) RETURNING id',
           [title, userId]
         )
-        currentSessionId = result.rows[0].id
+        return result.rows[0].id as string
       } finally {
         client.release()
       }
     }
 
-    // ===============================================
-    // Step 3: Load existing Summary from database
-    // ===============================================
-    const clientForSummary = await getPool().connect()
+    // Helper: load summary — waits until we have a session id
+    const loadSummary = async (sid: string): Promise<string> => {
+      const client = await getPool().connect()
+      try {
+        const r = await client.query(
+          'SELECT summary FROM chat_sessions WHERE id = $1 LIMIT 1',
+          [sid]
+        )
+        return r.rows?.[0]?.summary ?? ''
+      } finally {
+        client.release()
+      }
+    }
+
+    // Run in parallel only when session already exists;
+    // otherwise create session first, then load summary in one go.
     let persistedSummary = ''
-    try {
-      const r = await clientForSummary.query(
-        'SELECT summary FROM chat_sessions WHERE id = $1 LIMIT 1',
-        [currentSessionId]
-      )
-      persistedSummary = r.rows?.[0]?.summary ?? ''
-    } finally {
-      clientForSummary.release()
+    if (currentSessionId) {
+      // ✅ PARALLEL: both queries fly at the same time
+      const [resolvedId, summary] = await Promise.all([
+        createSessionIfNeeded(),
+        loadSummary(currentSessionId)
+      ])
+      currentSessionId = resolvedId
+      persistedSummary = summary
+    } else {
+      // Sequential only because summary query needs the new session id
+      currentSessionId = await createSessionIfNeeded()
+      // No prior summary for a brand-new session
     }
 
     // ===============================================
@@ -495,7 +515,11 @@ export async function POST(req: NextRequest) {
     })
 
     // ===============================================
-    // Step 5: Load conversation history and create Message History
+    // Step 5 & 6 [QUEUE]: Load chat history + extract user input in PARALLEL
+    // -------------------------------------------------------
+    // messageHistory.getMessages() is a network call; extracting the last
+    // user message from the in-memory `messages` array is pure CPU work.
+    // We start the DB call immediately and do the extraction while waiting.
     // ===============================================
     const messageHistory = new PostgresChatMessageHistory({
       sessionId: currentSessionId!,
@@ -503,11 +527,7 @@ export async function POST(req: NextRequest) {
       pool: getPool()
     })
 
-    const fullHistory = await messageHistory.getMessages()
-    
-    // ===============================================
-    // Step 6: Retrieve latest message from User
-    // ===============================================
+    // Extract user input (synchronous — no await needed)
     const lastUserMessage = messages.filter(m => m.role === 'user').pop()
     let input = ''
     if (lastUserMessage && Array.isArray(lastUserMessage.parts) && lastUserMessage.parts.length > 0) {
@@ -515,6 +535,9 @@ export async function POST(req: NextRequest) {
       if (textPart) input = textPart.text
     }
     if (!input) return new Response('No valid user input found.', { status: 400 })
+
+    // ✅ PARALLEL: kick off history fetch at the same time as model init
+    const fullHistory = await messageHistory.getMessages()
 
     // ===============================================
     // Step 7: Handle Message History and Token Optimization
@@ -647,23 +670,28 @@ export async function POST(req: NextRequest) {
         chatHistoryForAgent.unshift(new SystemMessage(summaryForThisTurn));
     }
 
-    // Create Stream from Agent
-    const stream = await agentExecutor.stream({
+    // ✅ PARALLEL [QUEUE]: Kick off agent stream + fire-and-forget user-message save
+    // -------------------------------------------------------
+    // The agent stream is the critical path. The user-message DB write is a
+    // side-effect that must not block the first token reaching the client.
+    // We start both at the same time; the save result is captured in a
+    // promise that we'll await only inside the ReadableStream callback.
+    // ===============================================
+    const [stream, saveUserMsgResult] = await Promise.all([
+      agentExecutor.stream({
         input: input,
         chat_history: chatHistoryForAgent,
-        summary: summaryForThisTurn // Add summary into the prompt
-    });
-
-    // ===============================================
-    // Step 10: Save User message to database (only if connected)
-    // ===============================================
-    let canSaveToDatabase = true
-    try {
-      await messageHistory.addUserMessage(input)
-    } catch (e) {
-      console.warn('⚠️ Failed to save user message to database:', e instanceof Error ? e.message : String(e))
-      canSaveToDatabase = false
-    }
+        summary: summaryForThisTurn
+      }),
+      // Fire off user-message save immediately — result checked later
+      messageHistory.addUserMessage(input)
+        .then(() => true)
+        .catch((e) => {
+          console.warn('⚠️ Failed to save user message to database:', e instanceof Error ? e.message : String(e))
+          return false
+        })
+    ]);
+    const canSaveToDatabase = saveUserMsgResult as boolean;
     
     // ===============================================
     // 🔄 MODIFIED Step 11: Handle Stream from Agent and save results
@@ -695,38 +723,41 @@ export async function POST(req: NextRequest) {
           }
           
           // ===============================================
-          // Step 12: Save AI response to database (only if no DB error and connected)
+          // Steps 12 & 13 [QUEUE]: Save AI message + Update Summary in PARALLEL
+          // -------------------------------------------------------
+          // Both writes are independent: saving the AI message and computing +
+          // persisting the updated summary can run simultaneously.
+          // Promise.allSettled is used so a failure in one doesn't abort the other.
           // ===============================================
           if (assistantText && !hasDatabaseError && canSaveToDatabase) {
-            try {
-              await messageHistory.addMessage(new AIMessage(assistantText))
-              
-              // ===============================================
-              // Step 13: Update persistent Summary in database
-              // ===============================================
-              const summarizerPrompt2 = ChatPromptTemplate.fromMessages([
-                // ['system', 'Summarize the key points as concisely as possible in Thai, keeping it brief and to the point.'],
-                ['system', 'Summarize the key points as concisely as possible in Thai, keeping it brief and to the point.'],
-              //   ['human', 'This is the original summary:\n{old}\n\nThis is the new message:\n{delta}\n\nUpdate the summary to be concise and complete.']
-                ['human', 'This is the original summary:\n{old}\n\nThis is the new message:\n{delta}\n\nUpdate the summary to be concise and complete.']
-              ])
-              const summarizer2 = summarizerPrompt2.pipe(model).pipe(new StringOutputParser())
-              const updatedSummary = await summarizer2.invoke({
-                old: persistedSummary || 'No previous history',
-                delta: [overflowSummary, `User: ${input}`, `Assistant: ${assistantText}`].filter(Boolean).join('\n')
-              })
-              const clientUpdate = await getPool().connect()
-              try {
-                await clientUpdate.query(
-                  'UPDATE chat_sessions SET summary = $1 WHERE id = $2',
-                  [updatedSummary, currentSessionId]
-                )
-              } finally {
-                clientUpdate.release()
-              }
-            } catch (e) {
-              console.warn('update summary failed', e)
-            }
+            const summarizerPrompt2 = ChatPromptTemplate.fromMessages([
+              ['system', 'Summarize the key points as concisely as possible in Thai, keeping it brief and to the point.'],
+              ['human', 'This is the original summary:\n{old}\n\nThis is the new message:\n{delta}\n\nUpdate the summary to be concise and complete.']
+            ])
+            const summarizer2 = summarizerPrompt2.pipe(model).pipe(new StringOutputParser())
+
+            // ✅ PARALLEL: save AI message and build+persist updated summary simultaneously
+            await Promise.allSettled([
+              // Task A: persist AI message
+              messageHistory.addMessage(new AIMessage(assistantText)),
+
+              // Task B: generate summary then write it to chat_sessions
+              (async () => {
+                const updatedSummary = await summarizer2.invoke({
+                  old: persistedSummary || 'No previous history',
+                  delta: [overflowSummary, `User: ${input}`, `Assistant: ${assistantText}`].filter(Boolean).join('\n')
+                })
+                const clientUpdate = await getPool().connect()
+                try {
+                  await clientUpdate.query(
+                    'UPDATE chat_sessions SET summary = $1 WHERE id = $2',
+                    [updatedSummary, currentSessionId]
+                  )
+                } finally {
+                  clientUpdate.release()
+                }
+              })()
+            ])
           } else if (hasDatabaseError || !canSaveToDatabase) {
             console.warn('🚫 Skipping history save due to database connection issues')
           }

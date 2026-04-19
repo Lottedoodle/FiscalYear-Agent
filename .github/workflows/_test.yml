@@ -1,0 +1,43 @@
+name: Test Template
+
+on:
+  workflow_call:
+
+jobs:
+  k6-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build temporary image
+        run: docker build -t test-app .
+
+      - name: Run App Container
+        run: |
+          docker run -d \
+            --name app-container \
+            -p 3000:3000 \
+            -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            test-app
+          
+          # Healthcheck: Wait until API is ready.
+          echo "Waiting for API to be ready..."
+          timeout 60s sh -c 'until curl -s http://localhost:3000; do echo "Still waiting..."; sleep 2; done'
+
+      - name: Execute k6
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: regression-test.js
+          flags: --env API_URL=http://localhost:3000 --out json=results.json
+
+      - name: Cleanup
+        if: always()
+        run: docker stop app-container && docker rm app-container
+
+      - name: Archive Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-report
+          path: results.json
+

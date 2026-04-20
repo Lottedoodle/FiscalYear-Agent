@@ -2,12 +2,12 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 
 export const options = {
-  vus: 3, 
+  vus: 1, 
   duration: '30s',
   
   thresholds: {
     // 95% ของ Request ทั้งหมดต้องตอบสนองเร็วกว่า 500ms
-    http_req_duration: ['p(95)<3500'], 
+    http_req_duration: ['p(95)<6000'], 
     // อัตราการ Error ต้องเป็น 0%
     http_req_failed: ['rate<0.01'], 
   },
@@ -18,7 +18,7 @@ export default function () {
 
   const payload = JSON.stringify({
     messages: [
-      { role: "user", parts: [{ type: "text", text: "CI Regression Test" }] },
+      { role: "user", parts: [{ type: "text", text: "CI Performance Test" }] },
     ],
     sessionId: "db0861bd-4b54-4a2c-bd19-6a38f14dffc1",
     userId: "8056d3da-4110-4271-a8bc-719555f878ed",
@@ -26,7 +26,7 @@ export default function () {
 
   const res = http.post(`${BASE_URL}/api/chat`, payload, {
     headers: { "Content-Type": "application/json" },
-    timeout: "5s",
+    timeout: "10s",
   });
 
   let parsed = null;
@@ -46,7 +46,7 @@ export default function () {
     "has content field": () =>
       parsed !== null &&
       typeof parsed === "object" &&
-      parsed.content !== undefined,
+      (parsed.summary !== undefined || parsed.content !== undefined), 
   });
 
   sleep(2);

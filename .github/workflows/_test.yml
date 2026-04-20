@@ -17,7 +17,7 @@ on:
         required: true
 
 jobs:
-  k6-regression:
+  k6-performance:
     runs-on: ubuntu-latest
 
     steps:
@@ -67,7 +67,7 @@ jobs:
         run: |
           curl -i -X POST http://localhost:3000/api/chat \
             -H "Content-Type: application/json" \
-            -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"CI Regression Test"}]}],"sessionId":"db0861bd-4b54-4a2c-bd19-6a38f14dffc1","userId":"8056d3da-4110-4271-a8bc-719555f878ed"}'
+            -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"CI performance Test"}]}],"sessionId":"db0861bd-4b54-4a2c-bd19-6a38f14dffc1","userId":"8056d3da-4110-4271-a8bc-719555f878ed"}'
 
       - name: Execute k6
         run: |
@@ -79,7 +79,7 @@ jobs:
             run \
             --env BASE_URL=http://localhost:3000 \
             --out json=/scripts/results.json \
-            /scripts/regression-test.js
+            /scripts/performance-test.js
 
       - name: Show container logs on failure
         if: failure()

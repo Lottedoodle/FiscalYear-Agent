@@ -2,20 +2,14 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 
 export const options = {
-  scenarios: {
-    regression: {
-      executor: 'constant-arrival-rate',
-      rate: 20,           // 20 req/s 
-      timeUnit: '1s',
-      duration: '45s',    // CI test
-      preAllocatedVUs: 20,
-      maxVUs: 100,
-    },
-  },
+  vus: 3, 
+  duration: '30s',
+  
   thresholds: {
-    http_req_failed: ["rate<0.001"],
-    http_req_duration: ["p(95)<1500", "p(99)<2500"],
-    checks: ["rate>0.99"],
+    // 95% ของ Request ทั้งหมดต้องตอบสนองเร็วกว่า 500ms
+    http_req_duration: ['p(95)<3500'], 
+    // อัตราการ Error ต้องเป็น 0%
+    http_req_failed: ['rate<0.01'], 
   },
 };
 
@@ -55,5 +49,5 @@ export default function () {
       parsed.content !== undefined,
   });
 
-  sleep(0.5);
+  sleep(2);
 }

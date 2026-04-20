@@ -67,7 +67,7 @@ jobs:
         run: |
           curl -i -X POST http://localhost:3000/api/chat \
             -H "Content-Type: application/json" \
-            -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"CI test"}]}],"sessionId":"ci-session","userId":"ci-test-user"}'
+            -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"CI Regression Test"}]}],"sessionId":"db0861bd-4b54-4a2c-bd19-6a38f14dffc1","userId":"8056d3da-4110-4271-a8bc-719555f878ed"}'
 
       - name: Execute k6
         run: |

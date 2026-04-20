@@ -26,8 +26,8 @@ export default function () {
     messages: [
       { role: "user", parts: [{ type: "text", text: "CI Regression Test" }] },
     ],
-    sessionId: "11111111-1111-1111-1111-111111111111",
-    userId: "22222222-2222-2222-2222-222222222222",
+    sessionId: "db0861bd-4b54-4a2c-bd19-6a38f14dffc1",
+    userId: "8056d3da-4110-4271-a8bc-719555f878ed",
   });
 
   const res = http.post(`${BASE_URL}/api/chat`, payload, {

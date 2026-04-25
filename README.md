@@ -1,6 +1,6 @@
 # 🤖 FiscalYear Agent — AI Financial Intelligence for Executives
 
-> **ผู้บริหารถามได้ทันที · ข้อมูลจริงจากฐานข้อมูล · ตัดสินใจได้เร็วขึ้น**
+> **Instant answers for executives · Real data from the database · Faster decision-making**
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://typescriptlang.org)
@@ -12,57 +12,57 @@
 
 ---
 
-## 📌 ภาพรวม (Overview)
+## 📌 Overview
 
-**FiscalYear Agent** คือระบบ AI Chatbot สำหรับผู้บริหาร ที่ช่วยให้สามารถ **ถามคำถามเกี่ยวกับงบการเงิน รายรับ รายจ่าย ต้นทุนการผลิต และค่าไฟฟ้า ได้ทันทีผ่านภาษาธรรมชาติ** โดยไม่ต้องรอรายงานหรือเปิด Excel
+**FiscalYear Agent** is an AI Chatbot built for executives, enabling them to **instantly ask questions about financial statements, revenue, expenses, production costs, and electricity bills — all through natural language** — without waiting for reports or opening Excel.
 
-ระบบดึงข้อมูลจากฐานข้อมูลจริง (Supabase PostgreSQL) แบบ Real-time ทำให้ผู้บริหารได้รับข้อมูลที่เป็นปัจจุบันที่สุด และสามารถตัดสินใจได้อย่างรวดเร็วและมั่นใจ
+The system pulls data directly from a live database (Supabase PostgreSQL) in real-time, ensuring executives always have the most up-to-date information and can make decisions with speed and confidence.
 
 ```
-ผู้บริหาร: "ยอดการผลิตเดือนมีนาคม 2025 เป็นเท่าไหร่?"
-  AI Agent: ค้นหาข้อมูลจากฐานข้อมูล...
-  ✅ "เดือนมีนาคม 2025 มียอดการผลิตรวม 12,500 หน่วย
-      ต้นทุนการผลิต: $45,200 USD
-      ค่าไฟฟ้า: $3,800 USD"
+Executive: "What was the production volume for March 2025?"
+  AI Agent: Querying the database...
+  ✅ "March 2025 total production volume: 12,500 units
+      Production cost: $45,200 USD
+      Electricity cost: $3,800 USD"
 ```
 
 ---
 
-## 🎯 ปัญหาที่แก้ไขได้ (Problems Solved)
+## 🎯 Problems Solved
 
-| ปัญหาเดิม | สิ่งที่ FiscalYear Agent ทำให้ |
-|------------|-------------------------------|
-| ต้องรอ CFO หรือทีมบัญชีสรุปรายงาน | ถามได้เองทันที ตลอด 24/7 |
-| ข้อมูลใน Excel/รายงาน ล้าหลังความเป็นจริง | ดึงข้อมูลจากฐานข้อมูลจริงแบบ Real-time |
-| ต้องเปิดหลายระบบเพื่อเปรียบเทียบตัวเลข | ถามรวมในคำถามเดียว AI รวบรวมให้ |
-| ภาษาเทคนิค ยากต่อการเข้าใจ | AI อธิบายเป็นภาษาธรรมชาติที่เข้าใจง่าย |
-| ใช้เวลานานในการตัดสินใจ | ได้คำตอบภายในไม่กี่วินาที |
-
----
-
-## ✨ ความสามารถหลัก (Key Features)
-
-### 💰 ด้านการเงิน (Financial Intelligence)
-- **📊 ยอดการผลิต (Production Volume)** — ดูปริมาณผลผลิตรายเดือน รายปี
-- **💡 ค่าไฟฟ้า (Electricity Cost)** — ติดตามค่าใช้จ่ายด้านพลังงาน (USD)
-- **🏭 ต้นทุนการผลิต (Production Cost)** — วิเคราะห์ต้นทุนการผลิตสินค้า (USD)
-- **🗄️ สำรวจฐานข้อมูล** — AI สามารถแจ้งได้ว่าข้อมูลใดมีในระบบบ้าง
-
-### 🤖 ด้าน AI & เทคโนโลยี
-- **Agent with Tool Calling** — AI เลือกและใช้ Tools ที่เหมาะสมโดยอัตโนมัติ
-- **RAG (Retrieval-Augmented Generation)** — ค้นหาข้อมูลจากเอกสาร PDF/CSV/TXT ผ่าน Vector Search
-- **Streaming Response** — แสดงคำตอบแบบ Real-time ไม่ต้องรอ
-- **Conversation Memory** — จดจำบริบทการสนทนา ถามต่อเนื่องได้โดยไม่ต้องพูดซ้ำ
-- **Smart Summarization** — สรุปบทสนทนายาวๆ อัตโนมัติ เพื่อประหยัด Token
-
-### 🔐 ด้านความปลอดภัย
-- **Supabase Auth** — ระบบ Authentication ระดับ Enterprise
-- **Row-Level Security (RLS)** — แต่ละ User เห็นเฉพาะข้อมูลของตัวเอง
-- **Session Isolation** — ประวัติการสนทนาแยกเป็นรายบุคคล
+| Before | With FiscalYear Agent |
+|--------|----------------------|
+| Waiting for CFO or accounting team to compile reports | Ask anytime, instantly — available 24/7 |
+| Data in Excel/reports lags behind reality | Pulls live data from the database in real-time |
+| Opening multiple systems to compare numbers | Ask everything in one question — AI aggregates it all |
+| Technical jargon is hard to understand | AI explains in plain, easy-to-understand language |
+| Long time spent reaching a decision | Get answers in seconds |
 
 ---
 
-## 🏗️ สถาปัตยกรรมระบบ (Architecture)
+## ✨ Key Features
+
+### 💰 Financial Intelligence
+- **📊 Production Volume** — View monthly and yearly production output
+- **💡 Electricity Cost** — Track energy expenditure in USD
+- **🏭 Production Cost** — Analyze manufacturing costs in USD
+- **🗄️ Database Explorer** — AI can tell you exactly what data is available in the system
+
+### 🤖 AI & Technology
+- **Agent with Tool Calling** — AI automatically selects and invokes the right tool for each query
+- **RAG (Retrieval-Augmented Generation)** — Search information from uploaded documents (PDF/CSV/TXT) via Vector Search
+- **Streaming Response** — Answers appear in real-time; no waiting
+- **Conversation Memory** — Remembers context so you can ask follow-up questions without repeating yourself
+- **Smart Summarization** — Automatically compresses long conversations to save tokens
+
+### 🔐 Security
+- **Supabase Auth** — Enterprise-grade authentication system
+- **Row-Level Security (RLS)** — Each user sees only their own data
+- **Session Isolation** — Conversation history is isolated per individual user
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -125,7 +125,7 @@ Open your browser at [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🐳 Deploy ด้วย Docker
+## 🐳 Deploy with Docker
 
 ### Build Image
 

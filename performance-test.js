@@ -19,11 +19,14 @@ export const options = {
 export default function () {
   const BASE_URL = __ENV.BASE_URL || __ENV.API_URL || "http://localhost:3000";
 
+  // ไม่ส่ง sessionId — ให้ API สร้าง session ใหม่ทุก iteration หลีกเลี่ยง duplicate key ใน chat_messages
   const payload = JSON.stringify({
     messages: [
-      { role: "user", parts: [{ type: "text", text: "CI Performance Test" }] },
+      {
+        role: "user",
+        parts: [{ type: "text", text: `CI Performance Test ${__ITER}` }],
+      },
     ],
-    sessionId: "db0861bd-4b54-4a2c-bd19-6a38f14dffc1",
     userId: "8056d3da-4110-4271-a8bc-719555f878ed",
   });
 
@@ -40,15 +43,10 @@ export default function () {
     "response body is not empty": (r) => !!r.body && r.body.length > 0,
 
     "response is a UI message stream": (r) => {
-      if (!r.body || typeof r.body !== "string") return false;
+      if (r.status !== 200 || !r.body || typeof r.body !== "string") return false;
       const body = r.body;
-      // AI SDK UI message stream มักมี data: หรือ JSON chunks ของ part/type
-      return (
-        body.includes("data:") ||
-        body.includes('"type"') ||
-        body.includes('"text"') ||
-        body.length > 10
-      );
+      // AI SDK UI message stream ใช้ SSE/data: — ไม่นับ JSON error 500
+      return body.includes("data:") || (body.includes('"type"') && body.includes('"text"'));
     },
   });
 
